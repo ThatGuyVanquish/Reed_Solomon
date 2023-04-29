@@ -1,5 +1,7 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 public class Polynomial {
 
@@ -24,6 +26,10 @@ public class Polynomial {
 
     public static Polynomial ONE(int basis) {
         return new Polynomial(new int[]{1}, basis);
+    }
+
+    public static Polynomial SYMBOL_POLYNOMIAL(int[] coeffs) {
+        return new Polynomial(coeffs, -1);
     }
 
     /**
@@ -219,26 +225,108 @@ public class Polynomial {
         return false;
     }
 
-    public static Polynomial findIrreduciblePoly(int basis, int degree) {
-        int[] coefficients = new int[degree + 1];
-        coefficients[0] = 1;
-        coefficients[degree] = 1;
-        Polynomial poly = new Polynomial(coefficients, basis);
+    /**
+     * Returns the generator polynomial of Field Fq over (n,k).
+     *
+     * @param q the basis of Fq
+     * @param n the length of the encoded message
+     * @param k the length of the original message
+     * @return the generator polynomial of field Fq over (n,k)
+     */
+    public static Polynomial computeGeneratorPolynomial(int q, int n, int k) {
+        int[] alphaPowers = new int[n - k + 1];
+        int alpha = Polynomial.findPrimitiveElement(q);
 
-        for (int i = 2; i <= degree / 2; i++) {
-            for (int j = i; j < degree; j += i) {
-                poly.getCoefficients()[j] = (poly.getCoefficients()[j] + 1) % basis;
+        for (int i = 0; i < alphaPowers.length; i++) {
+            alphaPowers[i] = Polynomial.power(alpha, i + 1, q);
+        }
+
+        return new Polynomial(Polynomial.findPolynomialFromRoots(alphaPowers, q), q);
+    }
+
+    /**
+     * Returns the coefficients array of a desired polynomial over Fq based on the given roots.
+     *
+     * @param roots the to-be roots of the returned polynomial
+     * @param q the basis of the field Fq
+     * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
+     */
+    public static int[] findPolynomialFromRoots(int[] roots, int q) {
+        int[] polynomial = new int[roots.length + 1];
+        polynomial[0] = 1;
+
+        for (int root : roots) {
+            int[] factor = {-root, 1};
+
+            polynomial = Polynomial.multiplyPolynomials(polynomial, factor, q);
+        }
+
+        return polynomial;
+    }
+
+    public static int[] multiplyPolynomials(int[] p, int[] q, int mod) {
+        int[] result = new int[p.length + q.length - 1];
+
+        for (int i = 0; i < p.length; i++) {
+            for (int j = 0; j < q.length; j++) {
+                result[i+j] = (result[i+j] + p[i] * q[j]) % mod;
             }
         }
 
-        for (int i = 2; i <= degree / 2; i++) {
-            if (degree % i != 0) continue;
-            Polynomial factor = findIrreduciblePoly(basis, i);
-            Polynomial potentialIrreducible = factor == null ? null : poly.mod(factor);
-            if (potentialIrreducible == null || potentialIrreducible.degree() == 0) return null;
+        return result;
+    }
+
+    public static int power(int base, int exponent, int mod) {
+        int result = 1;
+        while (exponent > 0) {
+            if (exponent % 2 == 1) {
+                result = (result * base) % mod;
+            }
+            base = (base * base) % mod;
+            exponent /= 2;
+        }
+        return result;
+    }
+
+    public static int findPrimitiveElement(int q) {
+        int[] factors = Polynomial.factor(q - 1);
+        int alpha = 2;
+
+        while (true) {
+            boolean isPrimitive = true;
+            for (int factor : factors) {
+                int power = (q - 1) / factor;
+                int alphaPower = Polynomial.power(alpha, power, q);
+                if (alphaPower == 1) {
+                    isPrimitive = false;
+                    break;
+                }
+            }
+            if (isPrimitive) {
+                return alpha;
+            }
+            alpha++;
+        }
+    }
+
+    public static int[] factor(int n) {
+        List<Integer> factors = new ArrayList<>();
+        int i = 2;
+
+        while (i <= n) {
+            if (n % i == 0) {
+                factors.add(i);
+                n /= i;
+            } else {
+                i++;
+            }
         }
 
-        return poly;
+        return factors.stream().mapToInt(Integer::intValue).toArray();
     }
+
+
+
+
 
 }

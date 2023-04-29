@@ -1,3 +1,4 @@
+import java.util.LinkedList;
 import java.util.List;
 
 public class ReedSolomon {
@@ -32,38 +33,45 @@ public class ReedSolomon {
         }
     }
 
-
     /**
      * Returns a pair of Polynomials which are {encoded message polynomial, encoded symbols}
      *
      * @param msg message to be endoded
      * @param nType desired length type of the encoded message, used to get encoded message length
-     * @return a list of Polynomials of length 2, with res.at(0) = encoded message and res.at(1) = encoded symbols
+     * @return a list of Polynomials of length 4:
+     *  #0 => Encoded message
+     *  #1 => Encoded symbols
+     *  #2 => k, Length of original message
+     *  #3 => Generator polynomial
      * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
      */
     public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException{
         int k = msg.degree();
-        int basis = msg.getBasis();
+        int q = msg.getBasis();
         if (nType == null) nType = EncodedLength.SHORT;
         int n = calculateEncodedLength(k, nType);
 //        if (n > basis)
 //            return RSEncoder(msg, n, powerOfQ(basis, n));
-        int generatorDegree = n - k + 1;
-        Polynomial generatorPolynomial = Polynomial.findIrreduciblePoly(msg.getBasis(), generatorDegree);
+        //int generatorDegree = n - k + 1;
+        Polynomial generatorPolynomial = Polynomial.computeGeneratorPolynomial(q, n, k);
+        int alpha = Polynomial.findPrimitiveElement(q);
 
-        if (generatorPolynomial == null)
-            throw new IllegalArgumentException("Message basis has no irreducible polynomials");
+        int[] symbolsArr = new int[n];
+        for(int i = 0; i < n; i++) {
+            symbolsArr[i] = msg.evaluatePolynomial((int)Math.pow(alpha, i + 1));
+        }
 
-        // message should be multiplied by x^(n-k+1)
-        int[] multiplierCoeffs = new int[n-k+1];
-        multiplierCoeffs[n-k] = 1;
-        Polynomial multiplier = new Polynomial(multiplierCoeffs, basis);
-        Polynomial multipliedMsg = msg.multiply(multiplier);
-        Polynomial encodedMsg = multipliedMsg.mod(generatorPolynomial);
+        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
+        Polynomial encodedSymbols = Polynomial.SYMBOL_POLYNOMIAL(symbolsArr);
+        Polynomial constantK = Polynomial.SYMBOL_POLYNOMIAL(new int[]{k});
 
-        // obtain encoded symbols by evaluating encodedMsg in n distinct points over Fq
+        List<Polynomial> res = new LinkedList<>();
+        res.add(encodedMsg);
+        res.add(encodedSymbols);
+        res.add(constantK);
+        res.add(generatorPolynomial);
 
-        return null;
+        return res;
     }
 
     private static int powerOfQ(int q, int minLength) {
