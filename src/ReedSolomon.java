@@ -46,8 +46,8 @@ public class ReedSolomon {
         int basis = msg.getBasis();
         if (nType == null) nType = EncodedLength.SHORT;
         int n = calculateEncodedLength(k, nType);
-        if (n > basis)
-            return RSEncoder(msg, n, powerOfQ(q, n));
+//        if (n > basis)
+//            return RSEncoder(msg, n, powerOfQ(basis, n));
         int generatorDegree = n - k + 1;
         Polynomial generatorPolynomial = Polynomial.findIrreduciblePoly(msg.getBasis(), generatorDegree);
 
@@ -63,14 +63,17 @@ public class ReedSolomon {
 
         // obtain encoded symbols by evaluating encodedMsg in n distinct points over Fq
 
-        return msg;
+        return null;
     }
 
     private static int powerOfQ(int q, int minLength) {
         int res = q;
-        while(res < minLength)
+        int deg = 1;
+        while(res < minLength) {
             res *= q;
-        return res;
+            deg++;
+        }
+        return deg;
     }
 
 }

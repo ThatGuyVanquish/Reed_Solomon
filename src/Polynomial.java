@@ -1,5 +1,5 @@
 import java.util.Arrays;
-import java.util.Random;
+import java.util.Collection;
 
 public class Polynomial {
 
@@ -16,6 +16,14 @@ public class Polynomial {
     public Polynomial(int[] coefficients, int basis) {
         this.coefficients = coefficients;
         this.basis = basis;
+    }
+
+    public static Polynomial ZERO(int basis) {
+        return new Polynomial(new int[]{0}, basis);
+    }
+
+    public static Polynomial ONE(int basis) {
+        return new Polynomial(new int[]{1}, basis);
     }
 
     /**
@@ -161,6 +169,7 @@ public class Polynomial {
     }
 
     public int evaluatePolynomial(int x) {
+        x = x % this.basis;
         int res = 0;
         for(int i = 0; i <= this.degree(); i++) {
             res = res + this.getCoefficient(i) * (int)Math.pow(x,i);
@@ -190,6 +199,25 @@ public class Polynomial {
         }
         return res.toString();
     }
+    public boolean in(Collection<Polynomial> c) {
+        for (Polynomial p : c) {
+            if (p.getBasis() != this.basis)
+                continue;
+            if (Arrays.equals(this.coefficients, p.getCoefficients()))
+                return true;
+        }
+        return false;
+    }
+
+    public boolean in(Polynomial[] arr) {
+        for (Polynomial p : arr) {
+            if (p.getBasis() != this.basis)
+                continue;
+            if (Arrays.equals(this.coefficients, p.getCoefficients()))
+                return true;
+        }
+        return false;
+    }
 
     public static Polynomial findIrreduciblePoly(int basis, int degree) {
         int[] coefficients = new int[degree + 1];
@@ -212,6 +240,5 @@ public class Polynomial {
 
         return poly;
     }
-
 
 }
