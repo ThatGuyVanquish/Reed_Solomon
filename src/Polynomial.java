@@ -68,7 +68,9 @@ public class Polynomial {
     public int getCoefficient(int degree) throws IllegalArgumentException {
         if (degree < 0 || degree > this.degree())
             throw new IllegalArgumentException("Invalid degree: " + degree);
-        return coefficients[degree];
+        int coeff = this.coefficients[degree] >= 0 ? this.coefficients[degree] :
+                this.basis - Math.abs(this.coefficients[degree] % basis);
+        return coeff;
     }
 
     /**
@@ -225,6 +227,21 @@ public class Polynomial {
         return false;
     }
 
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        Polynomial that = (Polynomial) other;
+        if (this.basis != that.getBasis() || this.degree() != that.degree()) return false;
+        int k = this.degree() + 1;
+        int q = this.basis;
+        for(int i = 0; i < k; i++) {
+            if (that.getCoefficient(i) != this.getCoefficient(i))
+                return false;
+        }
+        return true;
+    }
+
     /**
      * Returns the generator polynomial of Field Fq over (n,k).
      *
@@ -240,8 +257,14 @@ public class Polynomial {
         for (int i = 0; i < alphaPowers.length; i++) {
             alphaPowers[i] = Polynomial.power(alpha, i + 1, q);
         }
-
-        return new Polynomial(Polynomial.findPolynomialFromRoots(alphaPowers, q), q);
+        int[] coeffsForGenerator = Polynomial.findPolynomialFromRoots(alphaPowers, q);
+        int degree = coeffsForGenerator.length;
+        for(int i = coeffsForGenerator.length - 1; i >= 0; i--) {
+            if (coeffsForGenerator[i] == 0) degree--;
+            else break;
+        }
+        int[] newCoeffs = Arrays.copyOf(coeffsForGenerator, degree);
+        return new Polynomial(newCoeffs, q);
     }
 
     /**

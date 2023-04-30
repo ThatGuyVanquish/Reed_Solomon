@@ -25,7 +25,7 @@ public class ReedSolomon {
                 return ENCODE_MULTIPLIER * k;
             }
             case LONG -> {
-                return (int)Math.pow(2, ENCODE_MULTIPLIER) * k;
+                return 2 * ENCODE_MULTIPLIER * k;
             }
             default ->  {
                 return k;
@@ -46,7 +46,7 @@ public class ReedSolomon {
      * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
      */
     public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException{
-        int k = msg.degree();
+        int k = msg.degree() + 1;
         int q = msg.getBasis();
         if (nType == null) nType = EncodedLength.SHORT;
         int n = calculateEncodedLength(k, nType);
