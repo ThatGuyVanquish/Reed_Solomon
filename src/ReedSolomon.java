@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class ReedSolomon {
     public static int calculateEncodedLength(int k, EncodedLength nType) {
         switch (nType) {
             case NOT_ENOUGH -> {
-                return (int)(NOT_ENOUGH_MULTIPLIER * k);
+                return (int) (NOT_ENOUGH_MULTIPLIER * k);
             }
             case SHORT -> {
                 return 2 * k;
@@ -27,43 +28,41 @@ public class ReedSolomon {
             case LONG -> {
                 return 2 * ENCODE_MULTIPLIER * k;
             }
-            default ->  {
+            default -> {
                 return k;
             }
         }
     }
 
     /**
-     * Returns a pair of Polynomials which are {encoded message polynomial, encoded symbols}
-     *
-     * @param msg message to be endoded
+     * Given a message polynomial and desired length of encryption, uses Reed-Solomon to encrypt the message and
+     * generate the encoded message, a list of encoded symbols and a generator polynomial for Fq.
+     * @param msg   message to be endoded
      * @param nType desired length type of the encoded message, used to get encoded message length
      * @return a list of Polynomials of length 4:
-     *  #0 => Encoded message
-     *  #1 => Encoded symbols
-     *  #2 => k, Length of original message
-     *  #3 => Generator polynomial
+     * #0 => Encoded message
+     * #1 => Encoded symbols
+     * #2 => k, Length of original message
+     * #3 => Generator polynomial
      * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
      */
-    public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException{
+    public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException {
         int k = msg.degree() + 1;
         int q = msg.getBasis();
         if (nType == null) nType = EncodedLength.SHORT;
         int n = calculateEncodedLength(k, nType);
-//        if (n > basis)
-//            return RSEncoder(msg, n, powerOfQ(basis, n));
-        //int generatorDegree = n - k + 1;
-        Polynomial generatorPolynomial = Polynomial.computeGeneratorPolynomial(q, n, k);
-        int alpha = Polynomial.findPrimitiveElement(q);
+
+        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(q, n, k);
+        int alpha = ReedSolomon.findPrimitiveElement(q);
 
         int[] symbolsArr = new int[n];
-        for(int i = 0; i < n; i++) {
-            symbolsArr[i] = msg.evaluatePolynomial((int)Math.pow(alpha, i + 1));
+        for (int i = 0; i < n; i++) {
+            symbolsArr[i] = msg.evaluatePolynomial((int) Math.pow(alpha, i + 1));
         }
 
         Polynomial encodedMsg = msg.multiply(generatorPolynomial);
-        Polynomial encodedSymbols = Polynomial.SYMBOL_POLYNOMIAL(symbolsArr);
-        Polynomial constantK = Polynomial.SYMBOL_POLYNOMIAL(new int[]{k});
+        Polynomial encodedSymbols = new Polynomial(symbolsArr, q);
+        Polynomial constantK = new Polynomial(new int[]{k}, q);
 
         List<Polynomial> res = new LinkedList<>();
         res.add(encodedMsg);
@@ -74,14 +73,155 @@ public class ReedSolomon {
         return res;
     }
 
-    private static int powerOfQ(int q, int minLength) {
-        int res = q;
-        int deg = 1;
-        while(res < minLength) {
-            res *= q;
-            deg++;
-        }
-        return deg;
+    /**
+     * Given the encoded message (unnecessary), a polynomial of encoded symbols, the original message length k and the
+     * generator polynomial for Fq, decodes the original message of length k using Reed-Solomon unique decoding algorithm.
+     * @param encodedMsg Message encoded by RSEncoder
+     * @param symbols Encoded symbols polynomial
+     * @param ogMsgLength Polynomial of basis q whose coefficient is the value k - the length of the original message
+     * @param generator generator polynomial for Fq used by the RSEncoder
+     * @return the original message polynomial if it can be decoded, null otherwise
+     */
+    public static Polynomial uniqueDecoder(Polynomial encodedMsg, Polynomial symbols, Polynomial ogMsgLength, Polynomial generator) {
+        int n = symbols.degree() + 1;
+        int k = ogMsgLength.getCoefficient(0);
+        int q = ogMsgLength.getBasis();
+
+        int numErrors = (n - k) / 2;
+
+        List<Integer> errorIndices = checkForErrorsInSymbols(symbols, generator);
+
+        if (errorIndices.size() > numErrors) return null; // There are too many errors, can't decode
+
+        int[][] coordsForInterpolation = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
+
+        Polynomial interpolation = new Polynomial(Interpolation.lagrangeInterpolation(coordsForInterpolation, q), q);
+
+        int[] originalMessageCoeffs = new int[k];
+        for(int i = 0; i < k; i++)
+            originalMessageCoeffs[i] = interpolation.evaluatePolynomial(i);
+
+        return new Polynomial(originalMessageCoeffs, q);
     }
 
+    /**
+     * Given the basis q, desired length of encryption n and original message length k, computes the generator
+     * polynomial for Fq over (n,k).
+     * @param q the basis of Fq
+     * @param n the length of the encoded message
+     * @param k the length of the original message
+     * @return the generator polynomial of field Fq over (n,k)
+     */
+    public static Polynomial computeGeneratorPolynomial(int q, int n, int k) {
+        int[] alphaPowers = new int[n - k + 1];
+        int alpha = ReedSolomon.findPrimitiveElement(q);
+
+        for (int i = 0; i < alphaPowers.length; i++) {
+            alphaPowers[i] = ReedSolomon.powerModQ(alpha, i + 1, q);
+        }
+        return findPolynomialFromRoots(alphaPowers, q);
+    }
+
+    /**
+     * Given the to-be roots of the returned polynomial and the basis of the field Fq,
+     * computes the polynomial generated by multiplying all the terms (x-root).
+     * @param roots the to-be roots of the returned polynomial
+     * @param q     the basis of the field Fq
+     * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
+     */
+    public static Polynomial findPolynomialFromRoots(int[] roots, int q) {
+        Polynomial polynomial = Polynomial.ONE(q);
+
+        for (int root : roots) {
+            Polynomial termByRoot = new Polynomial(new int[]{-root, 1}, q);
+            polynomial = polynomial.multiply(termByRoot);
+        }
+
+        return polynomial;
+    }
+
+    /**
+     * Given the base, the exponent to power base by and the basis q of Fq, computes (base^exponent) modulo q.
+     * @param base base to be powered
+     * @param exponent exponent to power base by
+     * @param mod basis of F to modulo result
+     * @return value of base^exponent % mod
+     */
+    public static int powerModQ(int base, int exponent, int mod) {
+        int result = 1;
+        while (exponent > 0) {
+            if (exponent % 2 == 1) {
+                result = (result * base) % mod;
+            }
+            base = (base * base) % mod;
+            exponent /= 2;
+        }
+        return result;
+    }
+
+    /**
+     * Given basis q, finds the first primitive element of Fq.
+     * @param q integer basis of field Fq
+     * @return the first primitive element of field Fq
+     */
+    public static int findPrimitiveElement(int q) {
+        int[] factors = ReedSolomon.factor(q - 1);
+        int alpha = 2;
+
+        while (true) {
+            boolean isPrimitive = true;
+            for (int factor : factors) {
+                int power = (q - 1) / factor;
+                int alphaPower = ReedSolomon.powerModQ(alpha, power, q);
+                if (alphaPower == 1) {
+                    isPrimitive = false;
+                    break;
+                }
+            }
+            if (isPrimitive) {
+                return alpha;
+            }
+            alpha++;
+        }
+    }
+
+    /**
+     * Given an integer n, returns an array of all of n's factors.
+     * @param n integer to find factors for
+     * @return an integer array consisting of all of n's factors from 2 to n
+     */
+    public static int[] factor(int n) {
+        List<Integer> factors = new ArrayList<>();
+        int i = 2;
+
+        while (i <= n) {
+            if (n % i == 0) {
+                factors.add(i);
+                n /= i;
+            } else {
+                i++;
+            }
+        }
+
+        return factors.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    /**
+     * Given the list of the encoded symbols and the generator polynomial for (q,n,k),
+     * checks for errors in the encoded symbols polynomial using the generator polynomial.
+     * Evaluates the generator polynomial at every power of the basis q from 1 to n and compares to the
+     * @param encodedSymbols Polynomial whose coefficients are the encoded symbols
+     * @param generatorPolynomial Polynomial which is a generator polynomial for Fq
+     * @return a list of indices in which there is an error
+     */
+    public static List<Integer> checkForErrorsInSymbols(Polynomial encodedSymbols, Polynomial generatorPolynomial) {
+        List<Integer> errorIndices = new LinkedList<>();
+        int q = encodedSymbols.getBasis();
+        int primitive = findPrimitiveElement(q);
+        for (int i = 0; i < encodedSymbols.degree() + 1; i++) {
+            if (generatorPolynomial.evaluatePolynomial(ReedSolomon.powerModQ(primitive, i + 1, q)) != encodedSymbols.getCoefficient(i))
+                errorIndices.add(i);
+        }
+        return errorIndices;
+    }
 }

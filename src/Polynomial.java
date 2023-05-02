@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class Polynomial {
 
@@ -12,12 +9,17 @@ public class Polynomial {
      * Class to represent Polynomials over Fq for basis q.
      *
      * @param coefficients List of coefficients
-     * @param basis
+     * @param basis the basis for Fq
      * @pre foreach i, coefficients[i] = coefficients[i] % basis;
      */
     public Polynomial(int[] coefficients, int basis) {
         this.coefficients = coefficients;
         this.basis = basis;
+    }
+
+    public Polynomial(Polynomial other) {
+        this.coefficients = other.getCoefficients();
+        this.basis = other.getBasis();
     }
 
     public static Polynomial ZERO(int basis) {
@@ -28,13 +30,8 @@ public class Polynomial {
         return new Polynomial(new int[]{1}, basis);
     }
 
-    public static Polynomial SYMBOL_POLYNOMIAL(int[] coeffs) {
-        return new Polynomial(coeffs, -1);
-    }
-
     /**
      * Returns the degree of the polynomial.
-     *
      * @return the degree of the polynomial
      */
     public int degree() {
@@ -42,8 +39,7 @@ public class Polynomial {
     }
 
     /**
-     * Returns the basis q
-     *
+     * Returns the basis q.
      * @return the basis of the polynomial
      */
     public int getBasis() {
@@ -52,7 +48,6 @@ public class Polynomial {
 
     /**
      * Returns the coefficients of the polynomial.
-     *
      * @return an integer array of the polynomial's coefficients
      */
     public int[] getCoefficients() {
@@ -60,8 +55,7 @@ public class Polynomial {
     }
 
     /**
-     * Returns the coefficient for the $degree$th term.
-     *
+     * Returns the coefficient for the $degree$th term modulo q (positive value).
      * @param degree the degree of the term to retrieve the coefficient for
      * @return the coefficient for the $degree$th term
      */
@@ -75,9 +69,9 @@ public class Polynomial {
 
     /**
      * Returns a new polynomial that is the difference of this polynomial and the given polynomial.
-     *
      * @param other the polynomial to subtract from this polynomial
      * @return a new polynomial that is the difference of this polynomial and the given polynomial
+
      * @pre this.basis == other.getBasis();
      * @post result.getBasis() == this.basis; => new polynomial is over basis q
      * @post result.degree() <= Math.max(this.degree(), other.degree())
@@ -109,9 +103,9 @@ public class Polynomial {
 
     /**
      * Returns a new polynomial that is the multiplication of this polynomial and the given polynomial.
-     *
      * @param other the polynomial to multiply this polynomial by
      * @return a new polynomial that is the result of multiplication of this polynomial and the given polynomial
+
      * @pre this.basis == other.getBasis();
      * @post result.getBasis() == this.basis;
      * @post result.degree() <= this.degree() + other.degree() + 1;
@@ -141,10 +135,9 @@ public class Polynomial {
 
     /**
      * Calculates the remainder of this polynomial modulo a given divisor polynomial.
-     *
      * @param divisor the polynomial to use as divisor in the modulo operation
      * @return the remainder of this polynomial modulo the given divisor polynomial
-     * //
+
      * @pre this.getBasis() == divisor.getBasis();
      * @post result.getBasis() == this.getBasis();
      * @post result.degree() < divisor.degree();
@@ -176,6 +169,11 @@ public class Polynomial {
         return new Polynomial(Arrays.copyOf(resultCoeffs, resultDegree + 1), this.basis);
     }
 
+    /**
+     * Returns the result of evaluating this polynomial at point x, modulo q.
+     * @param x the value of the point to evaluate this polynomial at.
+     * @return result of the evaluation of this polynomial at point x.
+     */
     public int evaluatePolynomial(int x) {
         x = x % this.basis;
         int res = 0;
@@ -207,6 +205,12 @@ public class Polynomial {
         }
         return res.toString();
     }
+
+    /**
+     * Returns true if an identical polynomial to this is within c.
+     * @param c collection to check whether this polynomial is in
+     * @return true if found, false otherwise.
+     */
     public boolean in(Collection<Polynomial> c) {
         for (Polynomial p : c) {
             if (p.getBasis() != this.basis)
@@ -217,6 +221,11 @@ public class Polynomial {
         return false;
     }
 
+    /**
+     * Returns true if an identical polynomial to this is within arr.
+     * @param arr array to check whether this polynomial is in
+     * @return true if found, false otherwise.
+     */
     public boolean in(Polynomial[] arr) {
         for (Polynomial p : arr) {
             if (p.getBasis() != this.basis)
@@ -243,113 +252,25 @@ public class Polynomial {
     }
 
     /**
-     * Returns the generator polynomial of Field Fq over (n,k).
-     *
-     * @param q the basis of Fq
-     * @param n the length of the encoded message
-     * @param k the length of the original message
-     * @return the generator polynomial of field Fq over (n,k)
+     * Returns the interpolation polynomial based on Lagrange Interpolation on the coordinates coords over basis q
+     * @param coords coords to use for interpolation
+     * @param q basis of the field F
+     * @return a new Polynomial
      */
-    public static Polynomial computeGeneratorPolynomial(int q, int n, int k) {
-        int[] alphaPowers = new int[n - k + 1];
-        int alpha = Polynomial.findPrimitiveElement(q);
-
-        for (int i = 0; i < alphaPowers.length; i++) {
-            alphaPowers[i] = Polynomial.power(alpha, i + 1, q);
+    public static Polynomial interpolate(int[][] coords, int q) {
+        List<Polynomial> terms = new LinkedList<>();
+        for (int[] coord : coords) {
+            terms.add(new Polynomial(new int[]{-coord[0], 1}, q));
         }
-        int[] coeffsForGenerator = Polynomial.findPolynomialFromRoots(alphaPowers, q);
-        int degree = coeffsForGenerator.length;
-        for(int i = coeffsForGenerator.length - 1; i >= 0; i--) {
-            if (coeffsForGenerator[i] == 0) degree--;
-            else break;
-        }
-        int[] newCoeffs = Arrays.copyOf(coeffsForGenerator, degree);
-        return new Polynomial(newCoeffs, q);
-    }
-
-    /**
-     * Returns the coefficients array of a desired polynomial over Fq based on the given roots.
-     *
-     * @param roots the to-be roots of the returned polynomial
-     * @param q the basis of the field Fq
-     * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
-     */
-    public static int[] findPolynomialFromRoots(int[] roots, int q) {
-        int[] polynomial = new int[roots.length + 1];
-        polynomial[0] = 1;
-
-        for (int root : roots) {
-            int[] factor = {-root, 1};
-
-            polynomial = Polynomial.multiplyPolynomials(polynomial, factor, q);
-        }
-
-        return polynomial;
-    }
-
-    public static int[] multiplyPolynomials(int[] p, int[] q, int mod) {
-        int[] result = new int[p.length + q.length - 1];
-
-        for (int i = 0; i < p.length; i++) {
-            for (int j = 0; j < q.length; j++) {
-                result[i+j] = (result[i+j] + p[i] * q[j]) % mod;
+        List<Polynomial> lagrangePolynomials = new LinkedList<>();
+        for(int i = 0; i < coords.length; i++) {
+            Polynomial l = Polynomial.ONE(q);
+            for(int j = 0; j < coords.length; j++) {
+                if (j == i) continue;
+                l = l.multiply(terms.get(j));
             }
+            int denominator = l.evaluatePolynomial(coords[i][0]);
         }
-
-        return result;
+        return null;
     }
-
-    public static int power(int base, int exponent, int mod) {
-        int result = 1;
-        while (exponent > 0) {
-            if (exponent % 2 == 1) {
-                result = (result * base) % mod;
-            }
-            base = (base * base) % mod;
-            exponent /= 2;
-        }
-        return result;
-    }
-
-    public static int findPrimitiveElement(int q) {
-        int[] factors = Polynomial.factor(q - 1);
-        int alpha = 2;
-
-        while (true) {
-            boolean isPrimitive = true;
-            for (int factor : factors) {
-                int power = (q - 1) / factor;
-                int alphaPower = Polynomial.power(alpha, power, q);
-                if (alphaPower == 1) {
-                    isPrimitive = false;
-                    break;
-                }
-            }
-            if (isPrimitive) {
-                return alpha;
-            }
-            alpha++;
-        }
-    }
-
-    public static int[] factor(int n) {
-        List<Integer> factors = new ArrayList<>();
-        int i = 2;
-
-        while (i <= n) {
-            if (n % i == 0) {
-                factors.add(i);
-                n /= i;
-            } else {
-                i++;
-            }
-        }
-
-        return factors.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-
-
-
-
 }
