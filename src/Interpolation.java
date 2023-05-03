@@ -39,7 +39,7 @@ public class Interpolation {
                 if (i != j) {
                     int numerator = q - coordinates[j][0];
                     int denominator = coordinates[i][0] - coordinates[j][0];
-                    int inverseDenominator = modInverse(denominator, q);
+                    int inverseDenominator = multiplicativeInverse(denominator, q);
                     lagrangeFactors[i] = multiplyModQ(lagrangeFactors[i], multiplyModQ(numerator, inverseDenominator, q), q);
                 }
             }
@@ -70,7 +70,7 @@ public class Interpolation {
         return ((x - y) % q + q) % q;
     }
 
-    public static int modInverse(int a, int q) {
+    public static int multiplicativeInverse(int a, int q) {
         int t = 0, newt = 1;
         int r = q, newr = a;
         while (newr != 0) {
@@ -91,4 +91,8 @@ public class Interpolation {
         return t;
     }
 
+    public static int divide(int dividend, int divisor, int q) {
+        int inverseOfDivisor = multiplicativeInverse(divisor, q);
+        return (dividend * inverseOfDivisor) % q;
+    }
 }

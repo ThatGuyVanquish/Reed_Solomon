@@ -59,9 +59,9 @@ public class Polynomial {
      * @param degree the degree of the term to retrieve the coefficient for
      * @return the coefficient for the $degree$th term
      */
-    public int getCoefficient(int degree) throws IllegalArgumentException {
+    public int getCoefficient(int degree) {
         if (degree < 0 || degree > this.degree())
-            throw new IllegalArgumentException("Invalid degree: " + degree);
+            return 0;
         int coeff = this.coefficients[degree] >= 0 ? this.coefficients[degree] :
                 this.basis - Math.abs(this.coefficients[degree] % basis);
         return coeff;
@@ -84,7 +84,7 @@ public class Polynomial {
             result[i] += this.getCoefficient(i);
         }
         for (int i = 0; i <= other.degree(); i++) {
-            result[i] = Math.abs(result[i] - other.getCoefficient(i)) % this.basis;
+            result[i] = result[i] - other.getCoefficient(i) % this.basis;
         }
 
         // ensure result is over basis q
@@ -99,6 +99,30 @@ public class Polynomial {
 
         int[] resultOverQ = Arrays.copyOf(result, degreeOfResult + 1);
         return new Polynomial(resultOverQ, this.basis);
+    }
+
+    /**
+     * Given a polynomial returns the result of adding this polynomial to the given polynomial.
+     * @param other given polynomial to add to this
+     * @return Polynomial result of this+other
+     * @pre this.getBasis() == other.getBasis()
+     * @post this.getBasis() == result.getBasis()
+     * @post result.degree() <= Math.max(this.degree(), other.degree())
+     */
+    public Polynomial add(Polynomial other) {
+        int[] newCoeffs = new int[Math.max(this.degree(), other.degree()) + 1];
+        for(int i = 0; i < newCoeffs.length; i++) {
+            if (i > this.degree()) {
+                newCoeffs[i] = other.getCoefficient(i);
+                continue;
+            }
+            if (i > other.degree()) {
+                newCoeffs[i] = this.getCoefficient(i);
+                continue;
+            }
+            newCoeffs[i] = this.getCoefficient(i) + other.getCoefficient(i);
+        }
+        return new Polynomial(newCoeffs, this.basis);
     }
 
     /**
@@ -151,23 +175,61 @@ public class Polynomial {
             throw new IllegalArgumentException("Divisor can't be zero!!!!");
 
         int q = this.basis;
-        int degreeDiff = this.degree() - divisor.degree();
-        int[] resultCoeffs = Arrays.copyOf(this.coefficients, this.coefficients.length);
+        Polynomial dividend = new Polynomial(this.coefficients, q);
+        int divisorsLeadingCoefficient = divisor.getCoefficient(divisor.degree());
 
-        for (int i = degreeDiff; i >= 0; i--) {
-            int ratio = resultCoeffs[i + divisor.degree()] / divisor.coefficients[divisor.degree()];
-            for (int j = 0; j <= divisor.degree(); j++) {
-                resultCoeffs[i + j] = (resultCoeffs[i + j] - ratio * divisor.coefficients[j] + q) % q;
-            }
+        while(dividend.degree() >= divisor.degree()) {
+            int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
+            int multiplier = Interpolation.divide(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int degreeDifference = dividend.degree() - divisor.degree();
+            int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
+            coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
+            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, q);
+            Polynomial multipliedDivisor = divisor.multiply(multiplierPolynomial);
+            dividend = dividend.subtract(multipliedDivisor);
+            if (dividend.equals(ZERO(q)))
+                break;
         }
+        // dividend once completed is the remainder
+        return dividend;
 
-        // ensure result is over basis q
-        int resultDegree = this.degree();
-        while (resultDegree > 0 && resultCoeffs[resultDegree] == 0) {
-            resultDegree--;
-        }
-        return new Polynomial(Arrays.copyOf(resultCoeffs, resultDegree + 1), this.basis);
     }
+
+//    /**
+//     * Given a polynomial divisor, divide this polynomial by divisor using long polynomial division and return the result.
+//     * @param divisor the polynomial to use as divisor in the modulo operation
+//     * @return the division of this polynomial by the given divisor polynomial
+//
+//     * @pre this.getBasis() == divisor.getBasis();
+//     * @post result.getBasis() == this.getBasis();
+//     * @post result.degree() < divisor.degree();
+//     */
+    public Polynomial div(Polynomial divisor) {
+        if (divisor.equals(ZERO(this.basis))) {
+            throw new ArithmeticException("Division by zero polynomial");
+        }
+
+        int q = this.basis;
+        Polynomial dividend = new Polynomial(this.coefficients, q);
+        Polynomial result = ZERO(q);
+        int divisorsLeadingCoefficient = divisor.getCoefficient(divisor.degree());
+
+        while(dividend.degree() >= divisor.degree()) {
+            int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
+            int multiplier = Interpolation.divide(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int degreeDifference = dividend.degree() - divisor.degree();
+            int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
+            coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
+            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, q);
+            Polynomial multipliedDivisor = divisor.multiply(multiplierPolynomial);
+            dividend = dividend.subtract(multipliedDivisor);
+            result = result.add(multiplierPolynomial);
+            if (dividend.equals(ZERO(q)))
+                break;
+        }
+        return result;
+    }
+
 
     /**
      * Returns the result of evaluating this polynomial at point x, modulo q.
@@ -251,26 +313,4 @@ public class Polynomial {
         return true;
     }
 
-    /**
-     * Returns the interpolation polynomial based on Lagrange Interpolation on the coordinates coords over basis q
-     * @param coords coords to use for interpolation
-     * @param q basis of the field F
-     * @return a new Polynomial
-     */
-    public static Polynomial interpolate(int[][] coords, int q) {
-        List<Polynomial> terms = new LinkedList<>();
-        for (int[] coord : coords) {
-            terms.add(new Polynomial(new int[]{-coord[0], 1}, q));
-        }
-        List<Polynomial> lagrangePolynomials = new LinkedList<>();
-        for(int i = 0; i < coords.length; i++) {
-            Polynomial l = Polynomial.ONE(q);
-            for(int j = 0; j < coords.length; j++) {
-                if (j == i) continue;
-                l = l.multiply(terms.get(j));
-            }
-            int denominator = l.evaluatePolynomial(coords[i][0]);
-        }
-        return null;
-    }
 }
