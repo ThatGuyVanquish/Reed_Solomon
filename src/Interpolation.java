@@ -49,14 +49,17 @@ public class Interpolation {
     }
 
     /**
-     * Given two numbers x,y and a basis q, returns the positive value result of (x*y)%q
+     * Given two numbers x,y and a basis q, returns the result of (x*y)%q
      * @param x factor
      * @param y multiplier
      * @param q basis of the field Fq
      * @return result of (x*y)%q
      */
-    private static int multiplyModQ(int x, int y, int q) {
-        return (int) (((long) x * y) % q);
+    public static int multiplyModQ(int x, int y, int q) {
+        int res = (int)((long)x * y) % q;
+        if (res < 0)
+            res = q + res;
+        return res;
     }
 
     /**
@@ -68,6 +71,10 @@ public class Interpolation {
      */
     public static int subtractModQ(int x, int y, int q) {
         return ((x - y) % q + q) % q;
+    }
+
+    public static int additionModQ(int x, int y, int q) {
+        return ((x + y) % q + q) % q;
     }
 
     public static int multiplicativeInverse(int a, int q) {
@@ -91,8 +98,9 @@ public class Interpolation {
         return t;
     }
 
-    public static int divide(int dividend, int divisor, int q) {
+    public static int divideModQ(int dividend, int divisor, int q) {
         int inverseOfDivisor = multiplicativeInverse(divisor, q);
         return (dividend * inverseOfDivisor) % q;
     }
+
 }

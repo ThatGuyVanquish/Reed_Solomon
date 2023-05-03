@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -105,22 +104,127 @@ public class ReedSolomon {
         return new Polynomial(originalMessageCoeffs, q);
     }
 
-    public static Polynomial uniqueDecoder2(Polynomial symbols, Polynomial generator, int k) {
+    public static Polynomial uniqueDecoder2(Polynomial symbols, int k) {
         int n = symbols.degree() + 1;
         int q = symbols.getBasis();
 
         int maxNumOfErrors = (n - k) / 2;
 
-        Polynomial remainder = symbols.mod(generator);
-        if (remainder.equals(Polynomial.ZERO(q)))
-            symbols.div(generator);
-
-        Polynomial syndrome = ReedSolomon.getSyndromePolynomial(symbols, q, k, n);
-        Polynomial errorLocator = ReedSolomon.GCD(generator, syndrome);
-        if (errorLocator.degree() == 0) {
-            // There are no errors => received symbols are the original message
+        int[][] equations = new int[n][n];
+        int[] values = new int[n];
+        // Assuming there are maxNumOfErrors errors, values[0]...values[maxNumOfErrors - 1] are the error
+        // variables, and the rest are the "correct" values variables
+        int[] result = new int[n];
+        // First calculate the results
+        for(int i = 0; i < n; i++) {
+            result[i] = ((int)Math.pow(i, 2) * (-1) * symbols.getCoefficient(i)) % q;
+            if (result[i] < 0) result[i] = q + result[i];
         }
+        // Generate the linear equations coefficients based on the Berlekamp-Welch algorithm
+        for(int i = 0; i < n; i++) {
+            for(int j = 0; j < n; j++) {
+                switch (j) {
+                    case 0 -> equations[i][j] = symbols.getCoefficient(i);
+                    case 1 -> equations[i][j] = (symbols.getCoefficient(i) * i) % q;
+                    case 2 -> equations[i][j] = q - 1;
+                    default -> equations[i][j] = (q - ((int) Math.pow(i, j - 2) % q)) % q;
+                }
+            }
+        }
+        GaussianElimination(equations, result, q);
+
+
         return null;
+    }
+
+    private static int[] GaussianElimination(int[][] equations, int[] result, int q) {
+        int N = result.length;
+        for (int k = 0; k < N; k++)
+        {
+            // find pivot row
+            int max = k;
+            for (int i = k + 1; i < N; i++)
+                if (Math.abs(equations[i][k]) > Math.abs(equations[max][k]))
+                    max = i;
+
+            // swap row in A matrix
+            int[] temp = equations[k];
+            equations[k] = equations[max];
+            equations[max] = temp;
+
+            // swap corresponding values in constants matrix
+            int t = result[k];
+            result[k] = result[max];
+            result[max] = t;
+
+            // pivot within A and B
+            for (int i = k + 1; i < N; i++)
+            {
+                int factor = Interpolation.divideModQ(equations[i][k], equations[k][k], q);
+                result[i] = Interpolation.subtractModQ(result[i], Interpolation.multiplyModQ(factor, result[k], q), q);
+                for (int j = k; j < N; j++)
+                    equations[i][j] = Interpolation.subtractModQ(equations[i][j], Interpolation.multiplyModQ(factor, equations[k][j], q), q);
+            }
+        }
+
+        // equations matrix is in row echelon form, reduce it
+        for(int i = 0; i < N; i++) {
+            for(int j = 0; j < N; j++) {
+                equations[i][j] = Interpolation.divideModQ(equations[i][j], equations[i][i], q);
+            }
+            result[i] = Interpolation.divideModQ(result[i], equations[i][i], q);
+        }
+        System.out.println(Arrays.deepToString(equations));
+
+        // now that we have leading 1s, subtract row i from all rows <i
+        for(int i = N - 1; i > 0; i--) {
+            for(int j = i - 1; j >= 0; j--) {
+                int multiplier = equations[j][i];
+                result[j] = Interpolation.subtractModQ(result[j], Interpolation.multiplyModQ(result[i], multiplier, q), q);
+                equations[j][i] = 0;
+            }
+        }
+        System.out.println(Arrays.deepToString(equations));
+        return result;
+    }
+
+    public static int[] findUnknows(int[][] mat, int[] sol, int q) {
+        GaussianElimination(mat, sol, q);
+        int[] unknowns = new int[sol.length];
+        for(int i = sol.length - 1; i >= 0; i--) {
+            for(int j = i; j < sol.length - 1; j++) {
+                unknowns[i] = Interpolation.additionModQ(unknowns[i], Interpolation.divideModQ(sol[j], mat[i][j], q), q);
+            }
+        }
+        return unknowns;
+    }
+
+    public static void main(String[] args) {
+        Polynomial symbols = new Polynomial(new int[]{1, 6, 123, 456, 57, 86, 121}, 929);
+        int q = 929;
+        int[] result = new int[7];
+        // First calculate the results
+        for(int i = 0; i < 7; i++) {
+            result[i] = ((int)Math.pow(i, 2) * (-1) * symbols.getCoefficient(i)) % q;
+            if (result[i] < 0) result[i] = q + result[i];
+        }
+        System.out.println(Arrays.toString(result));
+
+        int[][] equations = new int[7][7];
+        for(int i = 0; i < 7; i++) {
+            for(int j = 0; j < 7; j++) {
+                switch (j) {
+                    case 0 -> equations[i][j] = symbols.getCoefficient(i);
+                    case 1 -> equations[i][j] = (symbols.getCoefficient(i) * i) % q;
+                    case 2 -> equations[i][j] = q - 1;
+                    default -> equations[i][j] = (q - ((int) Math.pow(i, j - 2) % q)) % q;
+                }
+            }
+        }
+
+        System.out.println(Arrays.toString(GaussianElimination(equations, result, 929)));
+        //System.out.println(Arrays.toString(findUnknows(equations, result, 929)));
+        //System.out.println(Arrays.deepToString(equations));
     }
 
     /**
@@ -266,26 +370,5 @@ public class ReedSolomon {
                 errorIndices.add(i);
         }
         return errorIndices;
-    }
-
-    public static void main(String[] arsg) {
-        int alpha = findPrimitiveElement(11);
-        System.out.println(alpha);
-        Polynomial g = computeGeneratorPolynomial(11, 15, 9);
-        System.out.println("Generator polynomial: " + g);
-//        Polynomial p = new Polynomial(new int[]{7, 6, 1}, 11);
-//        Polynomial g = computeGeneratorPolynomial(11, 6, 3);
-//        Polynomial pg = p.multiply(g);
-//        System.out.println("Primitive element of F11 is " + alpha);
-//        System.out.println("Polynomial: " + p);
-//        System.out.println("Generator Polynomial: " + g);
-//        System.out.println("Encoded Message Polynomial: " + pg);
-//        System.out.println("\n\n");
-//        for(int i = 0; i < 6; i++) {
-//            System.out.println("Polynomial at " + (int)(Math.pow(alpha, (i + 1))) + ": " + p.evaluatePolynomial((int)(Math.pow(alpha, (i + 1)))));
-//            System.out.println("Generator Polynomial at " + (int)(Math.pow(alpha, (i + 1))) + ": " + g.evaluatePolynomial((int)(Math.pow(alpha, (i + 1)))));
-//            System.out.println("Encoded message Polynomial at " + (int)(Math.pow(alpha, (i + 1))) + ": " + pg.evaluatePolynomial((int)(Math.pow(alpha, (i + 1)))));
-//            System.out.println("\n");
-//        }
     }
 }

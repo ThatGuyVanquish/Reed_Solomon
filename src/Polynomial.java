@@ -180,7 +180,7 @@ public class Polynomial {
 
         while(dividend.degree() >= divisor.degree()) {
             int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
-            int multiplier = Interpolation.divide(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int multiplier = Interpolation.divideModQ(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
             int degreeDifference = dividend.degree() - divisor.degree();
             int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
             coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
@@ -216,7 +216,7 @@ public class Polynomial {
 
         while(dividend.degree() >= divisor.degree()) {
             int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
-            int multiplier = Interpolation.divide(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int multiplier = Interpolation.divideModQ(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
             int degreeDifference = dividend.degree() - divisor.degree();
             int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
             coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
