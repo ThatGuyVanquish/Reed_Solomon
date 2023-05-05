@@ -12,7 +12,7 @@ public class Interpolation {
      */
     public static int[][] getInterpolationCoordinates(Polynomial symbols, List<Integer> errorIndices) {
         int[] symbolCoeffs = symbols.getCoefficients();
-        int q = symbols.getBasis();
+        GaloisField q = symbols.getField();
         int primitive = ReedSolomon.findPrimitiveElement(q);
         int numOfCoords = symbolCoeffs.length - errorIndices.size();
         int[][] coords = new int[numOfCoords][];
@@ -29,7 +29,7 @@ public class Interpolation {
         return coords;
     }
 
-    public static int[] lagrangeInterpolation(int[][] coordinates, int q) {
+    public static int[] lagrangeInterpolation(int[][] coordinates, GaloisField F) {
         int n = coordinates.length;
         int[] lagrangeFactors = new int[n];
         Arrays.fill(lagrangeFactors, 1);
@@ -37,70 +37,14 @@ public class Interpolation {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 if (i != j) {
-                    int numerator = q - coordinates[j][0];
+                    int numerator = F.getPrime() - coordinates[j][0];
                     int denominator = coordinates[i][0] - coordinates[j][0];
-                    int inverseDenominator = multiplicativeInverse(denominator, q);
-                    lagrangeFactors[i] = multiplyModQ(lagrangeFactors[i], multiplyModQ(numerator, inverseDenominator, q), q);
+                    int inverseDenominator = F.modInverse(denominator);
+                    lagrangeFactors[i] = F.multiply(lagrangeFactors[i], F.multiply(numerator, inverseDenominator));
                 }
             }
-            lagrangeFactors[i] = multiplyModQ(coordinates[i][1], lagrangeFactors[i], q);
+            lagrangeFactors[i] = F.multiply(coordinates[i][1], lagrangeFactors[i]);
         }
         return lagrangeFactors;
     }
-
-    /**
-     * Given two numbers x,y and a basis q, returns the result of (x*y)%q
-     * @param x factor
-     * @param y multiplier
-     * @param q basis of the field Fq
-     * @return result of (x*y)%q
-     */
-    public static int multiplyModQ(int x, int y, int q) {
-        int res = (int)((long)x * y) % q;
-        if (res < 0)
-            res = q + res;
-        return res;
-    }
-
-    /**
-     * Given two numbers x,y and a basis q, returns the positive value result of (x-y)%q
-     * @param x subtrahend
-     * @param y subtracted
-     * @param q basis of the field Fq
-     * @return result of (x-y)%q
-     */
-    public static int subtractModQ(int x, int y, int q) {
-        return ((x - y) % q + q) % q;
-    }
-
-    public static int additionModQ(int x, int y, int q) {
-        return ((x + y) % q + q) % q;
-    }
-
-    public static int multiplicativeInverse(int a, int q) {
-        int t = 0, newt = 1;
-        int r = q, newr = a;
-        while (newr != 0) {
-            int quotient = r / newr;
-            int temp = newt;
-            newt = subtractModQ(t, multiplyModQ(quotient, newt, q), q);
-            t = temp;
-            temp = newr;
-            newr = subtractModQ(r, multiplyModQ(quotient, newr, q), q);
-            r = temp;
-        }
-        if (r > 1) {
-            throw new ArithmeticException("a is not invertible");
-        }
-        if (t < 0) {
-            t += q;
-        }
-        return t;
-    }
-
-    public static int divideModQ(int dividend, int divisor, int q) {
-        int inverseOfDivisor = multiplicativeInverse(divisor, q);
-        return (dividend * inverseOfDivisor) % q;
-    }
-
 }

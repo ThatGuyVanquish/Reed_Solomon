@@ -48,21 +48,22 @@ public class ReedSolomon {
      */
     public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException {
         int k = msg.degree() + 1;
-        int q = msg.getBasis();
+        GaloisField F = msg.getField();
         if (nType == null) nType = EncodedLength.SHORT;
         int n = calculateEncodedLength(k, nType);
 
-        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(q, n, k);
-        int alpha = ReedSolomon.findPrimitiveElement(q);
+        int q = F.getPrime();
+        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
+        int alpha = ReedSolomon.findPrimitiveElement(F);
 
         int[] symbolsArr = new int[n];
         for (int i = 0; i < n; i++) {
-            symbolsArr[i] = msg.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i + 1, q));
+            symbolsArr[i] = msg.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i + 1, F));
         }
 
         Polynomial encodedMsg = msg.multiply(generatorPolynomial);
-        Polynomial encodedSymbols = new Polynomial(symbolsArr, q);
-        Polynomial constantK = new Polynomial(new int[]{k}, q);
+        Polynomial encodedSymbols = new Polynomial(symbolsArr, F);
+        Polynomial constantK = new Polynomial(new int[]{k}, F);
 
         List<Polynomial> res = new LinkedList<>();
         res.add(encodedMsg);
@@ -85,7 +86,8 @@ public class ReedSolomon {
     public static Polynomial uniqueDecoder(Polynomial encodedMsg, Polynomial symbols, Polynomial ogMsgLength, Polynomial generator) {
         int n = symbols.degree() + 1;
         int k = ogMsgLength.getCoefficient(0);
-        int q = ogMsgLength.getBasis();
+        GaloisField F = ogMsgLength.getField();
+        int q = F.getPrime();
 
         int numErrors = (n - k) / 2;
 
@@ -95,18 +97,19 @@ public class ReedSolomon {
 
         int[][] coordsForInterpolation = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
 
-        Polynomial interpolation = new Polynomial(Interpolation.lagrangeInterpolation(coordsForInterpolation, q), q);
+        Polynomial interpolation = new Polynomial(Interpolation.lagrangeInterpolation(coordsForInterpolation, F), F);
 
         int[] originalMessageCoeffs = new int[k];
         for(int i = 0; i < k; i++)
             originalMessageCoeffs[i] = interpolation.evaluatePolynomial(i);
 
-        return new Polynomial(originalMessageCoeffs, q);
+        return new Polynomial(originalMessageCoeffs, F);
     }
 
     public static Polynomial uniqueDecoder2(Polynomial symbols, int k) {
         int n = symbols.degree() + 1;
-        int q = symbols.getBasis();
+        GaloisField F = symbols.getField();
+        int q = F.getPrime();
 
         int maxNumOfErrors = (n - k) / 2;
 
@@ -131,77 +134,42 @@ public class ReedSolomon {
                 }
             }
         }
-        GaussianElimination(equations, result, q);
+        F.gaussianElimination(equations, result);
 
 
         return null;
     }
 
-    private static int[] GaussianElimination(int[][] equations, int[] result, int q) {
-        int N = result.length;
-        for (int k = 0; k < N; k++)
-        {
-            // find pivot row
-            int max = k;
-            for (int i = k + 1; i < N; i++)
-                if (Math.abs(equations[i][k]) > Math.abs(equations[max][k]))
-                    max = i;
+//    private static int[] GaussianElimination(int[][] equations, int[] result, int q) {
+//
+//        int n = result.length;
+//
+//
+//        return null;
+//    }
 
-            // swap row in A matrix
-            int[] temp = equations[k];
-            equations[k] = equations[max];
-            equations[max] = temp;
-
-            // swap corresponding values in constants matrix
-            int t = result[k];
-            result[k] = result[max];
-            result[max] = t;
-
-            // pivot within A and B
-            for (int i = k + 1; i < N; i++)
-            {
-                int factor = Interpolation.divideModQ(equations[i][k], equations[k][k], q);
-                result[i] = Interpolation.subtractModQ(result[i], Interpolation.multiplyModQ(factor, result[k], q), q);
-                for (int j = k; j < N; j++)
-                    equations[i][j] = Interpolation.subtractModQ(equations[i][j], Interpolation.multiplyModQ(factor, equations[k][j], q), q);
-            }
+    public static String printMatrix(int[][] mat) {
+        StringBuilder res = new StringBuilder();
+        for (int[] ints : mat) {
+            res.append(Arrays.toString(ints)).append("\n");
         }
-
-        // equations matrix is in row echelon form, reduce it
-        for(int i = 0; i < N; i++) {
-            for(int j = 0; j < N; j++) {
-                equations[i][j] = Interpolation.divideModQ(equations[i][j], equations[i][i], q);
-            }
-            result[i] = Interpolation.divideModQ(result[i], equations[i][i], q);
-        }
-        System.out.println(Arrays.deepToString(equations));
-
-        // now that we have leading 1s, subtract row i from all rows <i
-        for(int i = N - 1; i > 0; i--) {
-            for(int j = i - 1; j >= 0; j--) {
-                int multiplier = equations[j][i];
-                result[j] = Interpolation.subtractModQ(result[j], Interpolation.multiplyModQ(result[i], multiplier, q), q);
-                equations[j][i] = 0;
-            }
-        }
-        System.out.println(Arrays.deepToString(equations));
-        return result;
+        return res.toString();
     }
 
-    public static int[] findUnknows(int[][] mat, int[] sol, int q) {
-        GaussianElimination(mat, sol, q);
+    public static int[] findUnknows(int[][] mat, int[] sol, GaloisField F) {
+        F.gaussianElimination(mat, sol);
         int[] unknowns = new int[sol.length];
         for(int i = sol.length - 1; i >= 0; i--) {
             for(int j = i; j < sol.length - 1; j++) {
-                unknowns[i] = Interpolation.additionModQ(unknowns[i], Interpolation.divideModQ(sol[j], mat[i][j], q), q);
+                unknowns[i] = F.add(unknowns[i], F.div(sol[j], mat[i][j]));
             }
         }
         return unknowns;
     }
 
     public static void main(String[] args) {
-        Polynomial symbols = new Polynomial(new int[]{1, 6, 123, 456, 57, 86, 121}, 929);
-        int q = 929;
+        Polynomial symbols = new Polynomial(new int[]{1, 5, 3, 6, 3, 2, 2}, new GaloisField(7));
+        int q = 7;
         int[] result = new int[7];
         // First calculate the results
         for(int i = 0; i < 7; i++) {
@@ -221,10 +189,24 @@ public class ReedSolomon {
                 }
             }
         }
+//        System.out.println("MATRIX IS\n" + printMatrix(equations));
+//        int[] values = GaussianElimination(equations, result, 7);
+//        int[] coeffsForError = {values[0], values[1], 1};
+//        int[] coeffsForQ = {values[2], values[3], values[4], values[5], values[6]};
+//        Polynomial E = new Polynomial(coeffsForError, 7);
+//        Polynomial Q = new Polynomial(coeffsForQ, 7);
+//        System.out.println(Arrays.toString(values));
+//        System.out.println("E: " + E);
+//        System.out.println("Q: " + Q);
+//        System.out.println(Q.div(E));
 
-        System.out.println(Arrays.toString(GaussianElimination(equations, result, 929)));
+        System.out.println(new GaloisField(7).div(84, 5));
+
+        //System.out.println(Arrays.toString(GaussianElimination(equations, result, 929)));
+        //System.out.println(Arrays.toString(new GaloisField(929).gaussianElimination(equations, result)));
         //System.out.println(Arrays.toString(findUnknows(equations, result, 929)));
         //System.out.println(Arrays.deepToString(equations));
+//        System.out.println(Interpolation.multiplicativeInverse(167, 7));
     }
 
     /**
@@ -232,17 +214,17 @@ public class ReedSolomon {
      * calculate and return the syndrome polynomial received by evaluating
      * @param encodedSymbols the encoded symbols received by the encoder
      * @param k length of the original message
-     * @param q basis for Fq
+     * @param F the Galois Field to calculate over
      * @param n length of the encoded message
      * @return the syndrome Polynomial of the encoded symbols.
      */
-    public static Polynomial getSyndromePolynomial(Polynomial encodedSymbols, int q, int k, int n) {
-        int alpha = ReedSolomon.findPrimitiveElement(q);
+    public static Polynomial getSyndromePolynomial(Polynomial encodedSymbols, GaloisField F, int k, int n) {
+        int alpha = ReedSolomon.findPrimitiveElement(F);
         int t = (n - k) / 2; // Maximum number of errors
         int[] syndromeCoefficients = new int[n - t];
         int index = 0;
         for (int i = n - t; i <= n - 1; i++) {
-            syndromeCoefficients[index++] = encodedSymbols.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i, q));
+            syndromeCoefficients[index++] = encodedSymbols.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i, F));
         }
         int accurateLength = n - t;
         for(int i = accurateLength - 1; i > 0; i--) {
@@ -251,8 +233,8 @@ public class ReedSolomon {
             else break;
         }
         if (accurateLength == n - t)
-            return new Polynomial(syndromeCoefficients, q);
-        return new Polynomial(Arrays.copyOf(syndromeCoefficients, accurateLength), q);
+            return new Polynomial(syndromeCoefficients, F);
+        return new Polynomial(Arrays.copyOf(syndromeCoefficients, accurateLength), F);
     }
 
     /**
@@ -265,7 +247,7 @@ public class ReedSolomon {
      * @post res.degree() <= n-k/2
      */
     public static Polynomial GCD(Polynomial p1, Polynomial p2) {
-        Polynomial zero = Polynomial.ZERO(p1.getBasis());
+        Polynomial zero = Polynomial.ZERO(p1.getField());
         Polynomial dividend = new Polynomial(p1);
         Polynomial divisor = new Polynomial(p2);
         while (divisor.degree() > 0 || !divisor.equals(zero)) {
@@ -280,34 +262,34 @@ public class ReedSolomon {
     /**
      * Given the basis q, desired length of encryption n and original message length k, computes the generator
      * polynomial for Fq over (n,k).
-     * @param q the basis of Fq
+     * @param F the Galois Field to calculate over
      * @param n the length of the encoded message
      * @param k the length of the original message
      * @return the generator polynomial of field Fq over (n,k)
      */
-    public static Polynomial computeGeneratorPolynomial(int q, int n, int k) {
+    public static Polynomial computeGeneratorPolynomial(GaloisField F, int n, int k) {
         int[] alphaPowers = new int[n - k];
-        int alpha = ReedSolomon.findPrimitiveElement(q);
+        int alpha = ReedSolomon.findPrimitiveElement(F);
 
         for (int i = 0; i < alphaPowers.length; i++) {
-            alphaPowers[i] = ReedSolomon.powerModQ(alpha, i + 1, q);
+            alphaPowers[i] = ReedSolomon.powerModQ(alpha, i + 1, F);
         }
 
-        return findPolynomialFromRoots(alphaPowers, q);
+        return findPolynomialFromRoots(alphaPowers, F);
     }
 
     /**
      * Given the to-be roots of the returned polynomial and the basis of the field Fq,
      * computes the polynomial generated by multiplying all the terms (x-root).
      * @param roots the to-be roots of the returned polynomial
-     * @param q     the basis of the field Fq
+     * @param F the Galois Field to calculate over
      * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
      */
-    public static Polynomial findPolynomialFromRoots(int[] roots, int q) {
-        Polynomial polynomial = Polynomial.ONE(q);
+    public static Polynomial findPolynomialFromRoots(int[] roots, GaloisField F) {
+        Polynomial polynomial = Polynomial.ONE(F);
 
         for (int root : roots) {
-            Polynomial termByRoot = new Polynomial(new int[]{-root, 1}, q);
+            Polynomial termByRoot = new Polynomial(new int[]{-root, 1}, F);
             polynomial = polynomial.multiply(termByRoot);
         }
 
@@ -318,10 +300,11 @@ public class ReedSolomon {
      * Given the base, the exponent to power base by and the basis q of Fq, computes (base^exponent) modulo q.
      * @param base base to be powered
      * @param exponent exponent to power base by
-     * @param mod basis of F to modulo result
+     * @param F GaloisField to operate over
      * @return value of base^exponent % mod
      */
-    public static int powerModQ(int base, int exponent, int mod) {
+    public static int powerModQ(int base, int exponent, GaloisField F) {
+        int mod = F.getPrime();
         int result = 1;
         while (exponent > 0) {
             if (exponent % 2 == 1) {
@@ -333,7 +316,8 @@ public class ReedSolomon {
         return result;
     }
 
-    public static int findPrimitiveElement(int q) {
+    public static int findPrimitiveElement(GaloisField F) {
+        int q = F.getPrime();
         for(int i = 2; i < q; i++) {
             boolean[] nonZeroElements = new boolean[q];
             nonZeroElements[0] = true;
@@ -363,10 +347,10 @@ public class ReedSolomon {
      */
     public static List<Integer> checkForErrorsInSymbols(Polynomial encodedSymbols, Polynomial generatorPolynomial) {
         List<Integer> errorIndices = new LinkedList<>();
-        int q = encodedSymbols.getBasis();
-        int primitive = findPrimitiveElement(q);
+        GaloisField F = encodedSymbols.getField();
+        int primitive = findPrimitiveElement(F);
         for (int i = 0; i < encodedSymbols.degree() + 1; i++) {
-            if (generatorPolynomial.evaluatePolynomial(ReedSolomon.powerModQ(primitive, i + 1, q)) != encodedSymbols.getCoefficient(i))
+            if (generatorPolynomial.evaluatePolynomial(ReedSolomon.powerModQ(primitive, i + 1, F)) != encodedSymbols.getCoefficient(i))
                 errorIndices.add(i);
         }
         return errorIndices;

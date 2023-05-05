@@ -8,14 +8,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class PolynomialTest {
 
     Polynomial a, b, zero, one;
-    final int BASIS = 7;
+    GaloisField F7 = new GaloisField(7);
 
     @BeforeEach
     void setUp() {
-        a = new Polynomial(new int[]{0,0,0,0,6}, BASIS);
-        b = new Polynomial(new int[]{5,2,0,3}, BASIS);
-        zero = Polynomial.ZERO(BASIS);
-        one = Polynomial.ONE(BASIS);
+        a = new Polynomial(new int[]{0,0,0,0,6}, F7);
+        b = new Polynomial(new int[]{5,2,0,3}, F7);
+        zero = Polynomial.ZERO(F7);
+        one = Polynomial.ONE(F7);
     }
 
     @Test

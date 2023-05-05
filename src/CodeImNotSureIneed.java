@@ -46,10 +46,11 @@ public class CodeImNotSureIneed {
 
     /**
      * Given basis q, finds the first primitive element of Fq.
-     * @param q integer basis of field Fq
+     * @param F the galois field to operate over
      * @return the first primitive element of field Fq
      */
-    public static int findPrimitiveElement(int q) {
+    public static int findPrimitiveElement(GaloisField F) {
+        int q = F.getPrime();
         int[] factors = CodeImNotSureIneed.factor(q - 1);
         int alpha = 2;
 
@@ -57,7 +58,7 @@ public class CodeImNotSureIneed {
             boolean isPrimitive = true;
             for (int factor : factors) {
                 int power = (q - 1) / factor;
-                int alphaPower = ReedSolomon.powerModQ(alpha, power, q);
+                int alphaPower = ReedSolomon.powerModQ(alpha, power, F);
                 if (alphaPower == 1) {
                     isPrimitive = false;
                     break;
@@ -94,17 +95,17 @@ public class CodeImNotSureIneed {
     /**
      * Returns the interpolation polynomial based on Lagrange Interpolation on the coordinates coords over basis q
      * @param coords coords to use for interpolation
-     * @param q basis of the field F
+     * @param F the Galois Field Fq
      * @return a new Polynomial
      */
-    public static Polynomial interpolate(int[][] coords, int q) {
+    public static Polynomial interpolate(int[][] coords, GaloisField F) {
         List<Polynomial> terms = new LinkedList<>();
         for (int[] coord : coords) {
-            terms.add(new Polynomial(new int[]{-coord[0], 1}, q));
+            terms.add(new Polynomial(new int[]{-coord[0], 1}, F));
         }
         List<Polynomial> lagrangePolynomials = new LinkedList<>();
         for(int i = 0; i < coords.length; i++) {
-            Polynomial l = Polynomial.ONE(q);
+            Polynomial l = Polynomial.ONE(F);
             for(int j = 0; j < coords.length; j++) {
                 if (j == i) continue;
                 l = l.multiply(terms.get(j));

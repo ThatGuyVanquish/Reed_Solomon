@@ -3,31 +3,31 @@ import java.util.*;
 public class Polynomial {
 
     private final int[] coefficients;
-    private final int basis;
+    private final GaloisField F;
 
     /**
      * Class to represent Polynomials over Fq for basis q.
      *
      * @param coefficients List of coefficients
-     * @param basis the basis for Fq
+     * @param field the galois field Fq
      * @pre foreach i, coefficients[i] = coefficients[i] % basis;
      */
-    public Polynomial(int[] coefficients, int basis) {
+    public Polynomial(int[] coefficients, GaloisField field) {
         this.coefficients = coefficients;
-        this.basis = basis;
+        this.F = field;
     }
 
     public Polynomial(Polynomial other) {
         this.coefficients = other.getCoefficients();
-        this.basis = other.getBasis();
+        this.F = other.getField();
     }
 
-    public static Polynomial ZERO(int basis) {
-        return new Polynomial(new int[]{0}, basis);
+    public static Polynomial ZERO(GaloisField field) {
+        return new Polynomial(new int[]{0}, field);
     }
 
-    public static Polynomial ONE(int basis) {
-        return new Polynomial(new int[]{1}, basis);
+    public static Polynomial ONE(GaloisField field) {
+        return new Polynomial(new int[]{1}, field);
     }
 
     /**
@@ -39,11 +39,11 @@ public class Polynomial {
     }
 
     /**
-     * Returns the basis q.
-     * @return the basis of the polynomial
+     * Returns the field Fq this polynomial is over.
+     * @return the field Fq for which this is in Fq[x]
      */
-    public int getBasis() {
-        return this.basis;
+    public GaloisField getField() {
+        return this.F;
     }
 
     /**
@@ -62,9 +62,7 @@ public class Polynomial {
     public int getCoefficient(int degree) {
         if (degree < 0 || degree > this.degree())
             return 0;
-        int coeff = this.coefficients[degree] >= 0 ? this.coefficients[degree] :
-                this.basis - Math.abs(this.coefficients[degree] % basis);
-        return coeff;
+        return F.mod(this.coefficients[degree]);
     }
 
     /**
@@ -81,10 +79,10 @@ public class Polynomial {
 
         // calculate subtraction
         for (int i = 0; i <= this.degree(); i++) {
-            result[i] += this.getCoefficient(i);
+            result[i] = F.add(result[i], this.getCoefficient(i));
         }
         for (int i = 0; i <= other.degree(); i++) {
-            result[i] = result[i] - other.getCoefficient(i) % this.basis;
+            result[i] = F.subtract(result[i], - other.getCoefficient(i));
         }
 
         // ensure result is over basis q
@@ -95,10 +93,10 @@ public class Polynomial {
             else break;
         }
         if (degreeOfResult == result.length - 1)
-            return new Polynomial(result, this.basis);
+            return new Polynomial(result, this.F);
 
         int[] resultOverQ = Arrays.copyOf(result, degreeOfResult + 1);
-        return new Polynomial(resultOverQ, this.basis);
+        return new Polynomial(resultOverQ, this.F);
     }
 
     /**
@@ -120,9 +118,9 @@ public class Polynomial {
                 newCoeffs[i] = this.getCoefficient(i);
                 continue;
             }
-            newCoeffs[i] = this.getCoefficient(i) + other.getCoefficient(i);
+            newCoeffs[i] = F.add(this.getCoefficient(i), other.getCoefficient(i));
         }
-        return new Polynomial(newCoeffs, this.basis);
+        return new Polynomial(newCoeffs, this.F);
     }
 
     /**
@@ -139,7 +137,7 @@ public class Polynomial {
         // calculate multiplication over basis q
         for (int i = 0; i <= this.degree(); i++) {
             for (int j = 0; j <= other.degree(); j++) {
-                result[i + j] = (result[i + j] + this.getCoefficient(i) * other.getCoefficient(j)) % this.basis;
+                result[i + j] = F.add(result[i + j], F.multiply(this.getCoefficient(i), other.getCoefficient(j)));
             }
         }
 
@@ -151,10 +149,10 @@ public class Polynomial {
             else break;
         }
         if (degreeOfResult == result.length - 1)
-            return new Polynomial(result, this.basis);
+            return new Polynomial(result, this.F);
 
         int[] resultOverQ = Arrays.copyOf(result, degreeOfResult + 1);
-        return new Polynomial(resultOverQ, this.basis);
+        return new Polynomial(resultOverQ, this.F);
     }
 
     /**
@@ -174,20 +172,19 @@ public class Polynomial {
         if (divisor.degree() == 0 && divisor.getCoefficient(0) == 0)
             throw new IllegalArgumentException("Divisor can't be zero!!!!");
 
-        int q = this.basis;
-        Polynomial dividend = new Polynomial(this.coefficients, q);
+        Polynomial dividend = new Polynomial(this.coefficients, this.F);
         int divisorsLeadingCoefficient = divisor.getCoefficient(divisor.degree());
 
         while(dividend.degree() >= divisor.degree()) {
             int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
-            int multiplier = Interpolation.divideModQ(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int multiplier = this.F.div(dividendsLeadingCoefficient, divisorsLeadingCoefficient);
             int degreeDifference = dividend.degree() - divisor.degree();
             int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
             coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
-            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, q);
+            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, this.F);
             Polynomial multipliedDivisor = divisor.multiply(multiplierPolynomial);
             dividend = dividend.subtract(multipliedDivisor);
-            if (dividend.equals(ZERO(q)))
+            if (dividend.equals(ZERO(this.F)))
                 break;
         }
         // dividend once completed is the remainder
@@ -205,26 +202,25 @@ public class Polynomial {
 //     * @post result.degree() < divisor.degree();
 //     */
     public Polynomial div(Polynomial divisor) {
-        if (divisor.equals(ZERO(this.basis))) {
+        if (divisor.equals(ZERO(this.F))) {
             throw new ArithmeticException("Division by zero polynomial");
         }
 
-        int q = this.basis;
-        Polynomial dividend = new Polynomial(this.coefficients, q);
-        Polynomial result = ZERO(q);
+        Polynomial dividend = new Polynomial(this.coefficients, this.F);
+        Polynomial result = ZERO(this.F);
         int divisorsLeadingCoefficient = divisor.getCoefficient(divisor.degree());
 
         while(dividend.degree() >= divisor.degree()) {
             int dividendsLeadingCoefficient = dividend.getCoefficient(dividend.degree());
-            int multiplier = Interpolation.divideModQ(dividendsLeadingCoefficient, divisorsLeadingCoefficient, q);
+            int multiplier = this.F.div(dividendsLeadingCoefficient, divisorsLeadingCoefficient);
             int degreeDifference = dividend.degree() - divisor.degree();
             int[] coeffsForMultiplierPolynomial = new int[degreeDifference + 1];
             coeffsForMultiplierPolynomial[coeffsForMultiplierPolynomial.length - 1] = multiplier;
-            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, q);
+            Polynomial multiplierPolynomial = new Polynomial(coeffsForMultiplierPolynomial, this.F);
             Polynomial multipliedDivisor = divisor.multiply(multiplierPolynomial);
             dividend = dividend.subtract(multipliedDivisor);
             result = result.add(multiplierPolynomial);
-            if (dividend.equals(ZERO(q)))
+            if (dividend.equals(ZERO(this.F)))
                 break;
         }
         return result;
@@ -237,12 +233,12 @@ public class Polynomial {
      * @return result of the evaluation of this polynomial at point x.
      */
     public int evaluatePolynomial(int x) {
-        x = x % this.basis;
+        x = this.F.mod(x);
         int res = 0;
         for(int i = 0; i <= this.degree(); i++) {
             res = res + this.getCoefficient(i) * (int)Math.pow(x,i);
         }
-        return res % basis;
+        return this.F.mod(res);
     }
 
     @Override
@@ -275,7 +271,7 @@ public class Polynomial {
      */
     public boolean in(Collection<Polynomial> c) {
         for (Polynomial p : c) {
-            if (p.getBasis() != this.basis)
+            if (!p.getField().equals(this.F))
                 continue;
             if (Arrays.equals(this.coefficients, p.getCoefficients()))
                 return true;
@@ -290,7 +286,7 @@ public class Polynomial {
      */
     public boolean in(Polynomial[] arr) {
         for (Polynomial p : arr) {
-            if (p.getBasis() != this.basis)
+            if (!(p.getField().equals(this.F)))
                 continue;
             if (Arrays.equals(this.coefficients, p.getCoefficients()))
                 return true;
@@ -303,9 +299,8 @@ public class Polynomial {
         if (this == other) return true;
         if (other == null || getClass() != other.getClass()) return false;
         Polynomial that = (Polynomial) other;
-        if (this.basis != that.getBasis() || this.degree() != that.degree()) return false;
+        if (!(this.F.equals(that.getField())) || this.degree() != that.degree()) return false;
         int k = this.degree() + 1;
-        int q = this.basis;
         for(int i = 0; i < k; i++) {
             if (that.getCoefficient(i) != this.getCoefficient(i))
                 return false;
