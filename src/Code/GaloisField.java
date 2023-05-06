@@ -72,8 +72,11 @@ public class GaloisField {
      * @param x
      * @param y
      * @return positive integer equal to (x/y) % q
+     * @throws IllegalArgumentException if dividend % prime = 0
      */
-    public int div(int x, int y) {
+    public int div(int x, int y) throws IllegalArgumentException{
+        if (mod(y) == 0)
+            throw new IllegalArgumentException("Trying to divide by 0");
         int inverseOfDivisor = modInverse(y);
         return (x * inverseOfDivisor) % prime;
     }
