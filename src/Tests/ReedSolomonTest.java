@@ -107,38 +107,109 @@ class ReedSolomonTest {
 
     void uniqueDecoderNOT_ENOUGH() {
         List<Polynomial> encodedMsgNOT_ENOUGH = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.NOT_ENOUGH);
-        /*
-            change some values within the encoded symbols
-         */
+        Polynomial symbols = encodedMsgNOT_ENOUGH.get(1);
+        int k = encodedMsgNOT_ENOUGH.get(2).getCoefficient(0);
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        assertEquals(decodedMsg, P7);
 
+        int[] symbolsWithErrors = symbols.getCoefficients();
+
+        // n = 4, therefore since max_errors = (n-k)/2 = 4-3/2 = 0 should fail
+        symbolsWithErrors[1] = 1;
+        symbolsWithErrors[3] = 3;
+        symbolsWithErrors[4] = 1;
+        Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        assertNull(failedDecoding);
     }
 
     void uniqueDecoderSHORT() {
         List<Polynomial> encodedMsgSHORT = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.SHORT);
-        /*
-            change some values within the encoded symbols
-         */
+        Polynomial symbols = encodedMsgSHORT.get(1);
+        int k = encodedMsgSHORT.get(2).getCoefficient(0);
+        // Should succeed decoding as there are 0 errors
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        assertEquals(decodedMsg, P7);
 
+        int[] symbolsWithErrors = symbols.getCoefficients();
+
+        // n = 6, therefore since max_errors = (n-k)/2 = 6-3/2 = 1 should fail
+        symbolsWithErrors[1] = 1;
+        symbolsWithErrors[3] = 3;
+        Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        assertNull(failedDecoding);
     }
 
     void uniqueDecoderMEDIUM() {
         List<Polynomial> encodedMsgMEDIUM = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.MEDIUM);
-        /*
-            change some values within the encoded symbols
-         */
+        Polynomial symbols = encodedMsgMEDIUM.get(1);
+        int k = encodedMsgMEDIUM.get(2).getCoefficient(0);
+        // Should succeed decoding as there are 0 errors
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        assertEquals(decodedMsg, P7);
 
+        int[] symbolsWithErrors = symbols.getCoefficients();
+
+        // n = 12, therefore since max_errors = (n-k)/2 = 12-3/2 = 4 should fail
+        symbolsWithErrors[1] = 1;
+        symbolsWithErrors[3] = 3;
+        symbolsWithErrors[5] = 1;
+        symbolsWithErrors[6] = 3;
+        symbolsWithErrors[9] = 1;
+        symbolsWithErrors[11] = 3;
+        Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        assertNull(failedDecoding);
     }
     void uniqueDecoderLONG() {
         List<Polynomial> encodedMsgLONG = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.LONG);
-        /*
-            change some values within the encoded symbols
-         */
+        Polynomial symbols = encodedMsgLONG.get(1);
+        int k = encodedMsgLONG.get(2).getCoefficient(0);
+        // Should succeed decoding as there are 0 errors
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        assertEquals(decodedMsg, P7);
 
+        int[] symbolsWithErrors = symbols.getCoefficients();
+
+        // n = 24, therefore since max_errors = (n-k)/2 = 24-3/2 = 10 should fail
+        symbolsWithErrors[1] = 1;
+        symbolsWithErrors[3] = 3;
+        symbolsWithErrors[5] = 1;
+        symbolsWithErrors[6] = 3;
+        symbolsWithErrors[9] = 1;
+        symbolsWithErrors[11] = 3;
+        symbolsWithErrors[12] = 1;
+        symbolsWithErrors[14] = 3;
+        symbolsWithErrors[15] = 1;
+        symbolsWithErrors[16] = 3;
+        symbolsWithErrors[19] = 1;
+        symbolsWithErrors[21] = 3;
+        Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        assertNull(failedDecoding);
     }
 
-
-    @Test
-    void listDecoder() {
-
-    }
+//    @Test
+//    void listDecoder() {
+//        List<Polynomial> encodedMsg = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.SHORT);
+//        Polynomial symbols = encodedMsg.get(1);
+//        int k = encodedMsg.get(2).getCoefficient(0);
+//
+//        List<Polynomial> possibleMsg = ReedSolomon.listDecoder(symbols, k);
+//        assertTrue(P7.in(possibleMsg));
+//
+//        assertEquals(ReedSolomon.listDecode(symbols, k), P7);
+//
+//        int[] symbolsWithErrors = symbols.getCoefficients();
+//
+//        // n = 6, therefore since max_errors = (n-k)/2 = 6-3/2 = 1 should fail
+//        symbolsWithErrors[1] = 1;
+//        symbolsWithErrors[3] = 3;
+//        Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
+//        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+//
+//        possibleMsg = ReedSolomon.listDecode(symbolsWithErrors, k);
+//        assertNull(possibleMsg);
+//    }
 }
