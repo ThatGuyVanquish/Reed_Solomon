@@ -1,3 +1,5 @@
+package Code;
+
 import java.util.*;
 
 public class Polynomial {
@@ -82,7 +84,7 @@ public class Polynomial {
             result[i] = F.add(result[i], this.getCoefficient(i));
         }
         for (int i = 0; i <= other.degree(); i++) {
-            result[i] = F.subtract(result[i], - other.getCoefficient(i));
+            result[i] = F.subtract(result[i], other.getCoefficient(i));
         }
 
         // ensure result is over basis q
