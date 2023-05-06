@@ -1,4 +1,4 @@
-import java.util.Objects;
+package Code;
 
 public class GaloisField {
 
@@ -87,74 +87,6 @@ public class GaloisField {
         return (x % prime + prime) % prime; // ensure positive result
     }
 
-//    public int[][] gaussianElimination(int[][] mat) {
-//        int rows = mat.length;
-//        int cols = mat[0].length;
-//
-//        // Perform row echelon form elimination
-//        for (int i = 0; i < rows; i++) {
-//            // Find pivot row
-//            int pivotRow = i;
-//            while (pivotRow < rows && mat[pivotRow][i] == 0) {
-//                pivotRow++;
-//            }
-//
-//            if (pivotRow >= rows) {
-//                break; // No non-zero pivot found, so exit
-//            }
-//
-//            if (pivotRow != i) {
-//                // Swap current row with pivot row
-//                int[] temp = mat[i];
-//                mat[i] = mat[pivotRow];
-//                mat[pivotRow] = temp;
-//            }
-//
-//            // Perform row reduction
-//            int pivot = mat[i][i];
-//            int invPivot = modInverse(pivot);
-//            for (int j = i; j < cols; j++) {
-//                mat[i][j] = mod(mat[i][j] * invPivot);
-//            }
-//            for (int k = 0; k < rows; k++) {
-//                if (k != i) {
-//                    int factor = mat[k][i];
-//                    for (int j = i; j < cols; j++) {
-//                        mat[k][j] = mod(mat[k][j] - factor * mat[i][j]);
-//                    }
-//                }
-//            }
-//        }
-//
-//        // Perform back substitution to obtain reduced row echelon form
-//        for (int i = rows - 1; i >= 0; i--) {
-//            int pivotCol = 0;
-//            while (pivotCol < cols && mat[i][pivotCol] == 0) {
-//                pivotCol++;
-//            }
-//            if (pivotCol == cols) {
-//                continue; // All entries in this row are zero, so move to next row
-//            }
-//
-//            // Divide pivot row by pivot element
-//            int pivot = mat[i][pivotCol];
-//            int invPivot = modInverse(pivot);
-//            for (int j = pivotCol; j < cols; j++) {
-//                mat[i][j] = mod(mat[i][j] * invPivot);
-//            }
-//
-//            // Subtract pivot row from all rows above it
-//            for (int k = 0; k < i; k++) {
-//                int factor = mat[k][pivotCol];
-//                for (int j = pivotCol; j < cols; j++) {
-//                    mat[k][j] = mod(mat[k][j] - factor * mat[i][j]);
-//                }
-//            }
-//        }
-//
-//        return mat;
-//    }
-
     public int[] gaussianElimination(int[][] mat, int[] sol) {
         int rows = mat.length;
         int cols = mat[0].length;
@@ -200,8 +132,6 @@ public class GaloisField {
                 }
             }
         }
-        //System.out.println(ReedSolomon.printMatrix(augmentedMat));
-
         // Extract solution array from reduced row echelon form
         int[] solution = new int[rows];
         for (int i = 0; i < rows; i++) {

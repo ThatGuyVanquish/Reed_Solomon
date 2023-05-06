@@ -1,9 +1,11 @@
+package Tests;
+
+import Code.Polynomial;
+import Code.GaloisField;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.LinkedList;
-
 import static org.junit.jupiter.api.Assertions.*;
+import java.util.LinkedList;
 
 class PolynomialTest {
 
