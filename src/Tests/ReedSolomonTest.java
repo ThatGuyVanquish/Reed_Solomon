@@ -109,7 +109,7 @@ class ReedSolomonTest {
         List<Polynomial> encodedMsgNOT_ENOUGH = ReedSolomon.RSEncoder(P7, ReedSolomon.EncodedLength.NOT_ENOUGH);
         Polynomial symbols = encodedMsgNOT_ENOUGH.get(1);
         int k = encodedMsgNOT_ENOUGH.get(2).getCoefficient(0);
-        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder(symbols, k);
         assertEquals(decodedMsg, P7);
 
         int[] symbolsWithErrors = symbols.getCoefficients();
@@ -119,7 +119,7 @@ class ReedSolomonTest {
         symbolsWithErrors[3] = 3;
         symbolsWithErrors[4] = 1;
         Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
-        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder(P7_with_errors, k);
         assertNull(failedDecoding);
     }
 
@@ -128,7 +128,7 @@ class ReedSolomonTest {
         Polynomial symbols = encodedMsgSHORT.get(1);
         int k = encodedMsgSHORT.get(2).getCoefficient(0);
         // Should succeed decoding as there are 0 errors
-        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder(symbols, k);
         assertEquals(decodedMsg, P7);
 
         int[] symbolsWithErrors = symbols.getCoefficients();
@@ -137,7 +137,7 @@ class ReedSolomonTest {
         symbolsWithErrors[1] = 1;
         symbolsWithErrors[3] = 3;
         Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
-        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder(P7_with_errors, k);
         assertNull(failedDecoding);
     }
 
@@ -146,7 +146,7 @@ class ReedSolomonTest {
         Polynomial symbols = encodedMsgMEDIUM.get(1);
         int k = encodedMsgMEDIUM.get(2).getCoefficient(0);
         // Should succeed decoding as there are 0 errors
-        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder(symbols, k);
         assertEquals(decodedMsg, P7);
 
         int[] symbolsWithErrors = symbols.getCoefficients();
@@ -159,7 +159,7 @@ class ReedSolomonTest {
         symbolsWithErrors[9] = 1;
         symbolsWithErrors[11] = 3;
         Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
-        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder(P7_with_errors, k);
         assertNull(failedDecoding);
     }
     void uniqueDecoderLONG() {
@@ -167,7 +167,7 @@ class ReedSolomonTest {
         Polynomial symbols = encodedMsgLONG.get(1);
         int k = encodedMsgLONG.get(2).getCoefficient(0);
         // Should succeed decoding as there are 0 errors
-        Polynomial decodedMsg = ReedSolomon.uniqueDecoder2(symbols, k);
+        Polynomial decodedMsg = ReedSolomon.uniqueDecoder(symbols, k);
         assertEquals(decodedMsg, P7);
 
         int[] symbolsWithErrors = symbols.getCoefficients();
@@ -186,7 +186,7 @@ class ReedSolomonTest {
         symbolsWithErrors[19] = 1;
         symbolsWithErrors[21] = 3;
         Polynomial P7_with_errors = new Polynomial(symbolsWithErrors, GF7);
-        Polynomial failedDecoding = ReedSolomon.uniqueDecoder2(P7_with_errors, k);
+        Polynomial failedDecoding = ReedSolomon.uniqueDecoder(P7_with_errors, k);
         assertNull(failedDecoding);
     }
 

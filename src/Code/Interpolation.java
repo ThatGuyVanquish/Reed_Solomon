@@ -1,6 +1,6 @@
 package Code;
 
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Interpolation {
@@ -21,32 +21,37 @@ public class Interpolation {
 
         int indexOfError = 0, indexOfSymbol = 0;
         for (int i = 0; i < symbolCoeffs.length; i++) {
-            if (i == errorIndices.get(indexOfError)) {
+            if (errorIndices.size() != 0 && i == errorIndices.get(indexOfError)) {
                 indexOfError++;
                 continue;
             }
-            coords[indexOfSymbol] = new int[]{ReedSolomon.powerModQ(primitive, i, q), symbolCoeffs[i]};
+            coords[indexOfSymbol] = new int[]{i, symbolCoeffs[i]};
             indexOfSymbol++;
         }
         return coords;
     }
 
     public static int[] lagrangeInterpolation(int[][] coordinates, GaloisField F) {
-        int n = coordinates.length;
-        int[] lagrangeFactors = new int[n];
-        Arrays.fill(lagrangeFactors, 1);
-
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (i != j) {
-                    int numerator = F.getPrime() - coordinates[j][0];
-                    int denominator = coordinates[i][0] - coordinates[j][0];
-                    int inverseDenominator = F.modInverse(denominator);
-                    lagrangeFactors[i] = F.multiply(lagrangeFactors[i], F.multiply(numerator, inverseDenominator));
-                }
+        List<Polynomial> lagrangePolynomials = new LinkedList<>();
+        for(int i = 0; i < coordinates.length; i++) {
+            Polynomial l_i = Polynomial.ONE(F);
+            for(int j = 0; j < coordinates.length; j++) {
+                if (j == i)
+                    continue;
+                int negativeXValue = -coordinates[j][0];
+                int diff = coordinates[i][0] + negativeXValue;
+                Polynomial mul = new Polynomial(new int[]{negativeXValue, 1}, F);
+                Polynomial div = new Polynomial(new int[]{diff}, F);
+                l_i = l_i.multiply(mul).div(div);
             }
-            lagrangeFactors[i] = F.multiply(coordinates[i][1], lagrangeFactors[i]);
+            lagrangePolynomials.add(l_i);
         }
-        return lagrangeFactors;
+        Polynomial lagrange = Polynomial.ZERO(F);
+        for(int i = 0; i < coordinates.length; i++) {
+            Polynomial l_i = lagrangePolynomials.get(i);
+            Polynomial coeff = new Polynomial(new int[]{coordinates[i][1]}, F);
+            lagrange = lagrange.add(l_i.multiply(coeff));
+        }
+        return lagrange.getCoefficients();
     }
 }

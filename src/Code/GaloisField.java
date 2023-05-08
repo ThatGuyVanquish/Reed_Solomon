@@ -100,7 +100,6 @@ public class GaloisField {
             System.arraycopy(mat[i], 0, augmentedMat[i], 0, cols);
             augmentedMat[i][cols] = sol[i];
         }
-
         // Perform row echelon form elimination
         for (int i = 0; i < rows; i++) {
             // Find pivot row
