@@ -1,46 +1,17 @@
 package Code;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 public class ReedSolomon {
 
-    public enum EncodedLength {
-        NOT_ENOUGH,
-        SHORT,
-        MEDIUM,
-        LONG
-    }
-
-    private static final int ENCODE_MULTIPLIER = 4;
-    private static final double NOT_ENOUGH_MULTIPLIER = 1.5;
-
-    public static int calculateEncodedLength(int k, EncodedLength nType) {
-        switch (nType) {
-            case NOT_ENOUGH -> {
-                return (int) (NOT_ENOUGH_MULTIPLIER * k);
-            }
-            case SHORT -> {
-                return 2 * k;
-            }
-            case MEDIUM -> {
-                return ENCODE_MULTIPLIER * k;
-            }
-            case LONG -> {
-                return 2 * ENCODE_MULTIPLIER * k;
-            }
-            default -> {
-                return k;
-            }
-        }
-    }
-
     /**
      * Given a message polynomial and desired length of encryption, uses Reed-Solomon to encrypt the message and
      * generate the encoded message, a list of encoded symbols and a generator polynomial for Fq.
      * @param msg   message to be encoded, a polynomial over Fp for a prime p
-     * @param nType desired length type of the encoded message, used to get encoded message length
+     * @param n desired length of the encoded message
      * @return a list of Polynomials of length 4:
      * #0 => Encoded message
      * #1 => Encoded symbols
@@ -48,11 +19,9 @@ public class ReedSolomon {
      * #3 => Generator polynomial
      * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
      */
-    public static List<Polynomial> RSEncoder(Polynomial msg, EncodedLength nType) throws IllegalArgumentException {
+    public static List<Polynomial> RSEncoder(Polynomial msg, int n) throws IllegalArgumentException {
         int k = msg.degree() + 1;
         GaloisField F = msg.getField();
-        if (nType == null) nType = EncodedLength.SHORT;
-        int n = calculateEncodedLength(k, nType);
 
         int q = F.getPrime();
         Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
@@ -61,6 +30,33 @@ public class ReedSolomon {
         int[] symbolsArr = new int[n];
         for (int i = 0; i < n; i++) {
             symbolsArr[i] = msg.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i + 1, F));
+        }
+
+        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
+        Polynomial encodedSymbols = new Polynomial(symbolsArr, F);
+        Polynomial constantK = new Polynomial(new int[]{k}, F);
+
+        List<Polynomial> res = new LinkedList<>();
+        res.add(encodedMsg);
+        res.add(encodedSymbols);
+        res.add(constantK);
+        res.add(generatorPolynomial);
+
+        return res;
+    }
+
+    public static List<Polynomial> RSEncoder_L(Polynomial msg, int n) throws IllegalArgumentException {
+        int k = msg.degree() + 1;
+        GaloisField F = msg.getField();
+
+        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
+
+        int[] lagrangeCoeffs = Interpolation.lagrangeInterpolation(Interpolation.getInterpolationCoordinates(msg, new LinkedList<>()), F);
+        Polynomial L = new Polynomial(lagrangeCoeffs, F);
+
+        int[] symbolsArr = new int[n];
+        for (int i = 0; i < n; i++) {
+            symbolsArr[i] = L.evaluatePolynomial(i);
         }
 
         Polynomial encodedMsg = msg.multiply(generatorPolynomial);
@@ -112,7 +108,7 @@ public class ReedSolomon {
 
         values = F.gaussianElimination(equations, result);
         int currentNumOfErrors = maxNumOfErrors;
-        for(;currentNumOfErrors >= 0; currentNumOfErrors--) {
+        for(;currentNumOfErrors > 0; currentNumOfErrors--) {
             int[] errorCoeffs = Arrays.copyOfRange(values, 0, currentNumOfErrors);
             errorCoeffs = Arrays.copyOf(errorCoeffs, currentNumOfErrors + 1);
             errorCoeffs[currentNumOfErrors] = 1;
@@ -127,11 +123,81 @@ public class ReedSolomon {
                 System.out.println("num of errors is " + currentNumOfErrors);
                 return Q.div(E);
             }
-
         }
         // Can't correct errors, return null
         return null;
     }
+
+    public static Polynomial uniqueDecoder_L(Polynomial symbols, int k) {
+        int n = symbols.degree() + 1;
+        GaloisField F = symbols.getField();
+        int q = F.getPrime();
+
+        int maxNumOfErrors = (n - k) / 2;
+
+        int[][] equations = new int[n][n];
+        int[] values;
+        // Assuming there are at most maxNumOfErrors errors, values[0]...values[maxNumOfErrors - 1] are the error
+        // variables, and the rest are the "correct" values variables
+        int[] result = new int[n];
+        // First calculate the results
+        for(int i = 0; i < n; i++) {
+            result[i] = F.mod(((int)Math.pow(i, 2) * (-1) * symbols.getCoefficient(i)));
+        }
+        // Generate the linear equations coefficients based on the Berlekamp-Welch algorithm
+        for(int i = 0; i < n; i++) {
+            for(int j = 0; j < n; j++) {
+                switch (j) {
+                    case 0 -> equations[i][j] = symbols.getCoefficient(i);
+                    case 1 -> equations[i][j] = (symbols.getCoefficient(i) * i) % q;
+                    case 2 -> equations[i][j] = q - 1;
+                    default -> equations[i][j] = (q - ((int) Math.pow(i, j - 2) % q)) % q;
+                }
+            }
+        }
+
+        values = F.gaussianElimination(equations, result);
+        int currentNumOfErrors = maxNumOfErrors;
+        Polynomial Q, E = null, M = null;
+
+        for(;currentNumOfErrors > 0; currentNumOfErrors--) {
+            int[] errorCoeffs = Arrays.copyOfRange(values, 0, currentNumOfErrors);
+            errorCoeffs = Arrays.copyOf(errorCoeffs, currentNumOfErrors + 1);
+            errorCoeffs[currentNumOfErrors] = 1;
+            E = new Polynomial(errorCoeffs, F);
+
+            int[] Qcoeffs = Arrays.copyOfRange(values, currentNumOfErrors, values.length);
+            Q = new Polynomial(Qcoeffs, F);
+
+            if (Q.mod(E).equals(Polynomial.ZERO(F))) {
+                M = Q.div(E);
+                break;
+            }
+        }
+        Polynomial correctedSymbols;
+        List<Integer> errorIndices = new LinkedList<>();
+        if (currentNumOfErrors > 0) {
+             for(int i = 0; i < n; i++) {
+                 if (E.evaluatePolynomial(i) == 0)
+                     errorIndices.add(i);
+             }
+             int[] symbolsArr = symbols.getCoefficients();
+             for(int index : errorIndices) {
+                 symbolsArr[index] = M.evaluatePolynomial(index);
+             }
+             correctedSymbols = new Polynomial(symbolsArr, F);
+        }
+        else correctedSymbols = symbols;
+        int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(correctedSymbols, new LinkedList<>());
+        int[] lagrangeCoeffsOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
+        Polynomial lagrangeOfSymbols = new Polynomial(lagrangeCoeffsOfSymbols, F);
+        int[] originalMessageCoeffs = new int[k];
+        for(int i = 0; i < k; i++) {
+            originalMessageCoeffs[i] = lagrangeOfSymbols.evaluatePolynomial(i);
+        }
+        return new Polynomial(originalMessageCoeffs, F);
+    }
+
 
     public static String printMatrix(int[][] mat) {
         StringBuilder res = new StringBuilder();

@@ -124,4 +124,34 @@ public class CodeImNotSureIneed {
         }
         return errorIndices;
     }
+
+    public enum EncodedLength {
+        NOT_ENOUGH,
+        SHORT,
+        MEDIUM,
+        LONG
+    }
+
+    private static final int ENCODE_MULTIPLIER = 4;
+    private static final double NOT_ENOUGH_MULTIPLIER = 1.5;
+
+    public static int calculateEncodedLength(int k, EncodedLength nType) {
+        switch (nType) {
+            case NOT_ENOUGH -> {
+                return (int) (NOT_ENOUGH_MULTIPLIER * k);
+            }
+            case SHORT -> {
+                return 2 * k;
+            }
+            case MEDIUM -> {
+                return ENCODE_MULTIPLIER * k;
+            }
+            case LONG -> {
+                return 2 * ENCODE_MULTIPLIER * k;
+            }
+            default -> {
+                return k;
+            }
+        }
+    }
 }
