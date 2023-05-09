@@ -120,7 +120,6 @@ public class ReedSolomon {
             System.out.println("Q: " + Q + "\nE: " + E);
 
             if (Q.mod(E).equals(Polynomial.ZERO(F))) {
-                System.out.println("num of errors is " + currentNumOfErrors);
                 return Q.div(E);
             }
         }
