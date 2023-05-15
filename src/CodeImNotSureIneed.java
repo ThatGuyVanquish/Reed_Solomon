@@ -3,89 +3,11 @@ import Code.Interpolation;
 import Code.Polynomial;
 import Code.ReedSolomon;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 public class CodeImNotSureIneed {
-
-    /**
-     * Given basis q, finds the first primitive element of Fq.
-     * @param F the galois field to operate over
-     * @return the first primitive element of field Fq
-     */
-    public static int findPrimitiveElement(GaloisField F) {
-        int q = F.getPrime();
-        int[] factors = CodeImNotSureIneed.factor(q - 1);
-        int alpha = 2;
-
-        while (true) {
-            boolean isPrimitive = true;
-            for (int factor : factors) {
-                int power = (q - 1) / factor;
-                int alphaPower = ReedSolomon.powerModQ(alpha, power, F);
-                if (alphaPower == 1) {
-                    isPrimitive = false;
-                    break;
-                }
-            }
-            if (isPrimitive) {
-                return alpha;
-            }
-            alpha++;
-        }
-    }
-
-    /**
-     * Given an integer n, returns an array of all of n's factors.
-     * @param n integer to find factors for
-     * @return an integer array consisting of all of n's factors from 2 to n
-     */
-    public static int[] factor(int n) {
-        List<Integer> factors = new ArrayList<>();
-        int i = 2;
-
-        while (i <= n) {
-            if (n % i == 0) {
-                factors.add(i);
-                n /= i;
-            } else {
-                i++;
-            }
-        }
-
-        return factors.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    /**
-     * Given the encoded symbols polynomial, the basis q, the lengths k of the original message and n of the encoded message
-     * calculate and return the syndrome polynomial received by evaluating
-     * @param encodedSymbols the encoded symbols received by the encoder
-     * @param k length of the original message
-     * @param F the Galois Field to calculate over
-     * @param n length of the encoded message
-     * @return the syndrome Polynomial of the encoded symbols.
-     */
-    public static Polynomial getSyndromePolynomial(Polynomial encodedSymbols, GaloisField F, int k, int n) {
-        int alpha = ReedSolomon.findPrimitiveElement(F);
-        int t = (n - k) / 2; // Maximum number of errors
-        int[] syndromeCoefficients = new int[n - t];
-        int index = 0;
-        for (int i = n - t; i <= n - 1; i++) {
-            syndromeCoefficients[index++] = encodedSymbols.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i, F));
-        }
-        int accurateLength = n - t;
-        for(int i = accurateLength - 1; i > 0; i--) {
-            if (syndromeCoefficients[i] == 0)
-                accurateLength--;
-            else break;
-        }
-        if (accurateLength == n - t)
-            return new Polynomial(syndromeCoefficients, F);
-        return new Polynomial(Arrays.copyOf(syndromeCoefficients, accurateLength), F);
-    }
-
     /**
      * Given two polynomials, returns their greatest common divisor
      *
@@ -105,25 +27,6 @@ public class CodeImNotSureIneed {
             divisor = remainder;
         }
         return dividend;
-    }
-
-    /**
-     * Given the list of the encoded symbols and the generator polynomial for (q,n,k),
-     * checks for errors in the encoded symbols polynomial using the generator polynomial.
-     * Evaluates the generator polynomial at every power of the basis q from 1 to n and compares to the
-     * @param encodedSymbols Polynomial whose coefficients are the encoded symbols
-     * @param generatorPolynomial Polynomial which is a generator polynomial for Fq
-     * @return a list of indices in which there is an error
-     */
-    public static List<Integer> checkForErrorsInSymbols(Polynomial encodedSymbols, Polynomial generatorPolynomial) {
-        List<Integer> errorIndices = new LinkedList<>();
-        GaloisField F = encodedSymbols.getField();
-        int primitive = findPrimitiveElement(F);
-        for (int i = 0; i < encodedSymbols.degree() + 1; i++) {
-            if (generatorPolynomial.evaluatePolynomial(ReedSolomon.powerModQ(primitive, i + 1, F)) != encodedSymbols.getCoefficient(i))
-                errorIndices.add(i);
-        }
-        return errorIndices;
     }
 
     public static Polynomial uniqueDecoder_e(Polynomial symbols, int k, int e) {
@@ -234,5 +137,86 @@ public class CodeImNotSureIneed {
         }
         return new Polynomial(originalMessageCoeffs, F);
     }
+
+    /**
+     * Given the basis q, desired length of encryption n and original message length k, computes the generator
+     * polynomial for Fq over (n,k).
+     * @param F the Galois Field to calculate over
+     * @param n the length of the encoded message
+     * @param k the length of the original message
+     * @return the generator polynomial of field Fq over (n,k)
+     */
+    public static Polynomial computeGeneratorPolynomial(GaloisField F, int n, int k) {
+        int[] alphaPowers = new int[n - k];
+//        int alpha = ReedSolomon.findPrimitiveElement(F);
+        int alpha = findPrimitiveElement(F);
+
+        for (int i = 0; i < alphaPowers.length; i++) {
+//            alphaPowers[i] = ReedSolomon.powerModQ(alpha, i + 1, F);
+            alphaPowers[i] = powerModQ(alpha, i + 1, F);
+        }
+
+        return findPolynomialFromRoots(alphaPowers, F);
+    }
+
+    /**
+     * Given the to-be roots of the returned polynomial and the basis of the field Fq,
+     * computes the polynomial generated by multiplying all the terms (x-root).
+     * @param roots the to-be roots of the returned polynomial
+     * @param F the Galois Field to calculate over
+     * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
+     */
+    public static Polynomial findPolynomialFromRoots(int[] roots, GaloisField F) {
+        Polynomial polynomial = Polynomial.ONE(F);
+
+        for (int root : roots) {
+            Polynomial termByRoot = new Polynomial(new int[]{-root, 1}, F);
+            polynomial = polynomial.multiply(termByRoot);
+        }
+
+        return polynomial;
+    }
+
+    /**
+     * Given the base, the exponent to power base by and the basis q of Fq, computes (base^exponent) modulo q.
+     * @param base base to be powered
+     * @param exponent exponent to power base by
+     * @param F GaloisField to operate over
+     * @return value of base^exponent % mod
+     */
+    public static int powerModQ(int base, int exponent, GaloisField F) {
+        int mod = F.getPrime();
+        int result = 1;
+        while (exponent > 0) {
+            if (exponent % 2 == 1) {
+                result = (result * base) % mod;
+            }
+            base = (base * base) % mod;
+            exponent /= 2;
+        }
+        return result;
+    }
+
+    public static int findPrimitiveElement(GaloisField F) {
+        int q = F.getPrime();
+        for(int i = 2; i < q; i++) {
+            boolean[] nonZeroElements = new boolean[q];
+            nonZeroElements[0] = true;
+            nonZeroElements[i] = true;
+            boolean found = true;
+            for(int j = 2; j < q; j++) {
+                int pow = (int)Math.pow(i, j) % q;
+                if (nonZeroElements[pow]) {
+                    found = false;
+                    break;
+                }
+                nonZeroElements[pow] = true;
+            }
+            if (found)
+                return i;
+        }
+        return -1;
+    }
+
 
 }

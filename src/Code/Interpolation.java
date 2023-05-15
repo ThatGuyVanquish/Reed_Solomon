@@ -14,8 +14,8 @@ public class Interpolation {
      */
     public static int[][] getInterpolationCoordinates(Polynomial symbols, List<Integer> errorIndices) {
         int[] symbolCoeffs = symbols.getCoefficients();
-        GaloisField q = symbols.getField();
-        int primitive = ReedSolomon.findPrimitiveElement(q);
+//        GaloisField q = symbols.getField();
+//        int primitive = ReedSolomon.findPrimitiveElement(q);
         int numOfCoords = symbolCoeffs.length - errorIndices.size();
         int[][] coords = new int[numOfCoords][];
 

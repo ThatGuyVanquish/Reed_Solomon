@@ -2,8 +2,6 @@ import Code.GaloisField;
 import Code.Polynomial;
 import Code.ReedSolomon;
 
-import java.time.format.TextStyle;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -32,15 +30,15 @@ public class ReedSolomonCodes {
         List<Polynomial> regEncoder = ReedSolomon.RSEncoder(pol, encodedLength);
         List<Polynomial> interpolEncoder = ReedSolomon.RSEncoder_L(pol, encodedLength);
 
-        System.out.println("Regular encoded symbols: " + regEncoder.get(1) + "\n"); // encoded symbols
-        System.out.println("Interpolation encoded symbols: " + interpolEncoder.get(1) + "\n"); // encoded symbols
+        System.out.println("Regular encoded symbols: " + regEncoder.get(0) + "\n"); // encoded symbols
+        System.out.println("Interpolation encoded symbols: " + interpolEncoder.get(0) + "\n"); // encoded symbols
 
         System.out.println("Insert the number of desired errors in the received symbols:");
         int errorCount = reader.nextInt();
 
-        Polynomial RESymbols = regEncoder.get(1);
+        Polynomial RESymbols = regEncoder.get(0);
         int[] REScoeffs = RESymbols.getCoefficients();
-        Polynomial IESymbols = interpolEncoder.get(1);
+        Polynomial IESymbols = interpolEncoder.get(0);
         int[] IEScoeffs = IESymbols.getCoefficients();
 
         int index = 0;
@@ -77,20 +75,20 @@ public class ReedSolomonCodes {
         Polynomial tPol = new Polynomial(new int[]{1,6,3,5,4}, GF7);
         System.out.println("Regular encoder:");
         List<Polynomial> regEnc = ReedSolomon.RSEncoder(tPol, 7);
-        System.out.println("Encoded symbols: " + regEnc.get(1) + "\n"); // encoded symbols
+        System.out.println("Encoded symbols: " + regEnc.get(0) + "\n"); // encoded symbols
         System.out.println("Interpolation encoder:");
         List<Polynomial> interpolationEnc = ReedSolomon.RSEncoder_L(tPol, 7);
-        System.out.println("Encoded symbols: " + interpolationEnc.get(1) + "\n"); // encoded symbols
+        System.out.println("Encoded symbols: " + interpolationEnc.get(0) + "\n"); // encoded symbols
         System.out.println();
 
 //      For some reason, the decoding the regular encoder produces terrible results
         System.out.println("Regular encoder => Regular decoder:");
-        Polynomial regEncRegDec = ReedSolomon.uniqueDecoder(regEnc.get(1), 5);
+        Polynomial regEncRegDec = ReedSolomon.uniqueDecoder(regEnc.get(0), 5);
         System.out.println(regEncRegDec);
         System.out.println();
 
         System.out.println("Regular encoder => Interpolation decoder:");
-        Polynomial regEncInterpolDec = ReedSolomon.uniqueDecoder_L(regEnc.get(1), 5);
+        Polynomial regEncInterpolDec = ReedSolomon.uniqueDecoder_L(regEnc.get(0), 5);
         System.out.println(regEncInterpolDec);
         System.out.println();
 
@@ -99,12 +97,12 @@ public class ReedSolomonCodes {
             good results when there are no errors.
          */
         System.out.println("Interpolation encoder => Regular decoder:");
-        Polynomial interpolationEncRegDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(1), 5);
+        Polynomial interpolationEncRegDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(0), 5);
         System.out.println(interpolationEncRegDec);
         System.out.println();
 
         System.out.println("Interpolation encoder => Interpolation decoder:");
-        Polynomial interpolationEncInterpolDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(1), 5);
+        Polynomial interpolationEncInterpolDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(0), 5);
         System.out.println(interpolationEncInterpolDec);
     }
 
@@ -113,10 +111,10 @@ public class ReedSolomonCodes {
         Polynomial tPol = new Polynomial(new int[]{1,6,3,42, 13}, GF929);
         System.out.println("Regular encoder:");
         List<Polynomial> regEnc = ReedSolomon.RSEncoder(tPol, 7);
-        System.out.println("Encoded symbols: " + regEnc.get(1) + "\n"); // encoded symbols
+        System.out.println("Encoded symbols: " + regEnc.get(0) + "\n"); // encoded symbols
         System.out.println("Interpolation encoder:");
         List<Polynomial> interpolationEnc = ReedSolomon.RSEncoder_L(tPol, 7);
-        System.out.println("Encoded symbols: " + interpolationEnc.get(1) + "\n"); // encoded symbols
+        System.out.println("Encoded symbols: " + interpolationEnc.get(0) + "\n"); // encoded symbols
         System.out.println();
 
 //      For some reason, the decoding the regular encoder produces terrible results
@@ -136,18 +134,18 @@ public class ReedSolomonCodes {
             to mostly produce null
          */
         System.out.println("Interpolation encoder => Regular decoder:");
-        Polynomial interpolationEncRegDec = ReedSolomon.uniqueDecoder(interpolationEnc.get(1), 5);
+        Polynomial interpolationEncRegDec = ReedSolomon.uniqueDecoder(interpolationEnc.get(0), 5);
         System.out.println(interpolationEncRegDec);
         System.out.println();
 
         System.out.println("Interpolation encoder => Interpolation decoder:");
-        Polynomial interpolationEncInterpolDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(1), 5);
+        Polynomial interpolationEncInterpolDec = ReedSolomon.uniqueDecoder_L(interpolationEnc.get(0), 5);
         System.out.println(interpolationEncInterpolDec);
     }
 
     public static void main(String[] args) {
-//        GF929Tests();
+        GF929Tests();
 //        GF7Tests();
-        test();
+//        test();
     }
 }

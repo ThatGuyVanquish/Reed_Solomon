@@ -1,6 +1,5 @@
 package Code;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -10,22 +9,22 @@ public class ReedSolomon {
     /**
      * Given a message polynomial and desired length of encryption, uses Reed-Solomon to encrypt the message and
      * generate the encoded message, a list of encoded symbols and a generator polynomial for Fq.
-     * @param msg   message to be encoded, a polynomial over Fp for a prime p
+     * @param msg message to be encoded, a polynomial over Fp for a prime p
      * @param n desired length of the encoded message
-     * @return a list of Polynomials of length 4:
-     * #0 => Encoded message
+     * @return a list of Polynomials of length 2 [4]:
+     * #0 => Encoded message /DEPRECATED
      * #1 => Encoded symbols
      * #2 => k, Length of original message
-     * #3 => Generator polynomial
+     * #3 => Generator polynomial /DEPRECATED
      * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
      */
     public static List<Polynomial> RSEncoder(Polynomial msg, int n) throws IllegalArgumentException {
         int k = msg.degree() + 1;
         GaloisField F = msg.getField();
 
-        int q = F.getPrime();
-        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
-        int alpha = ReedSolomon.findPrimitiveElement(F);
+//        int q = F.getPrime();
+//        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
+//        int alpha = ReedSolomon.findPrimitiveElement(F);
 
         int[] symbolsArr = new int[n];
         for (int i = 0; i < n; i++) {
@@ -33,24 +32,38 @@ public class ReedSolomon {
             symbolsArr[i] = msg.evaluatePolynomial(i);
         }
 
-        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
+//        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
         Polynomial encodedSymbols = new Polynomial(symbolsArr, F);
         Polynomial constantK = new Polynomial(new int[]{k}, F);
 
         List<Polynomial> res = new LinkedList<>();
-        res.add(encodedMsg);
+//        res.add(encodedMsg);
         res.add(encodedSymbols);
         res.add(constantK);
-        res.add(generatorPolynomial);
+//        res.add(generatorPolynomial);
 
         return res;
     }
 
+    /**
+     * Given a message polynomial and desired length of encryption, uses Reed-Solomon to encrypt the message and
+     * generate the encoded message, a list of encoded symbols and a generator polynomial for Fq.
+     * Encodes the original message by interpolating the given polynomial's coefficients over Fq and generating
+     * the encoded symbols by evaluating the interpolated polynomial at every i in [0, n).
+     * @param msg message to be encoded, a polynomial over Fp for a prime p
+     * @param n desired length of the encoded message
+     * @return a list of Polynomials of length 2 [4]:
+     * #0 => Encoded message /DEPRECATED
+     * #1 => Encoded symbols
+     * #2 => k, Length of original message
+     * #3 => Generator polynomial /DEPRECATED
+     * @throws IllegalArgumentException if basis q of message has no irreducible polynomials
+     */
     public static List<Polynomial> RSEncoder_L(Polynomial msg, int n) throws IllegalArgumentException {
         int k = msg.degree() + 1;
         GaloisField F = msg.getField();
 
-        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
+//        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
 
         int[][] coords = Interpolation.getInterpolationCoordinates(msg, new LinkedList<>());
         int[] lagrangeCoeffs = Interpolation.lagrangeInterpolation(coords, F);
@@ -61,15 +74,15 @@ public class ReedSolomon {
             symbolsArr[i] = L.evaluatePolynomial(i);
         }
 
-        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
+//        Polynomial encodedMsg = msg.multiply(generatorPolynomial);
         Polynomial encodedSymbols = new Polynomial(symbolsArr, F);
         Polynomial constantK = new Polynomial(new int[]{k}, F);
 
         List<Polynomial> res = new LinkedList<>();
-        res.add(encodedMsg);
+//        res.add(encodedMsg);
         res.add(encodedSymbols);
         res.add(constantK);
-        res.add(generatorPolynomial);
+//        res.add(generatorPolynomial);
 
         return res;
     }
@@ -129,6 +142,13 @@ public class ReedSolomon {
         return null;
     }
 
+    /**
+     * Given a polynomial of encoded symbols and the original message length k
+     * decodes the original message of length k using Reed-Solomon unique decoding algorithm of Berlekamp-Welch
+     * by interpolation.
+     * @param symbols Encoded symbols polynomial
+     * @return the original message polynomial if it can be decoded, null otherwise
+     */
     public static Polynomial uniqueDecoder_L(Polynomial symbols, int k) {
         int n = symbols.degree() + 1;
         GaloisField F = symbols.getField();
@@ -208,83 +228,5 @@ public class ReedSolomon {
             res.append(Arrays.toString(ints)).append("\n");
         }
         return res.toString();
-    }
-
-    /**
-     * Given the basis q, desired length of encryption n and original message length k, computes the generator
-     * polynomial for Fq over (n,k).
-     * @param F the Galois Field to calculate over
-     * @param n the length of the encoded message
-     * @param k the length of the original message
-     * @return the generator polynomial of field Fq over (n,k)
-     */
-    public static Polynomial computeGeneratorPolynomial(GaloisField F, int n, int k) {
-        int[] alphaPowers = new int[n - k];
-        int alpha = ReedSolomon.findPrimitiveElement(F);
-
-        for (int i = 0; i < alphaPowers.length; i++) {
-            alphaPowers[i] = ReedSolomon.powerModQ(alpha, i + 1, F);
-        }
-
-        return findPolynomialFromRoots(alphaPowers, F);
-    }
-
-    /**
-     * Given the to-be roots of the returned polynomial and the basis of the field Fq,
-     * computes the polynomial generated by multiplying all the terms (x-root).
-     * @param roots the to-be roots of the returned polynomial
-     * @param F the Galois Field to calculate over
-     * @return an integer array which holds the coefficient for a polynomial from Fq[X] whose roots are given.
-     */
-    public static Polynomial findPolynomialFromRoots(int[] roots, GaloisField F) {
-        Polynomial polynomial = Polynomial.ONE(F);
-
-        for (int root : roots) {
-            Polynomial termByRoot = new Polynomial(new int[]{-root, 1}, F);
-            polynomial = polynomial.multiply(termByRoot);
-        }
-
-        return polynomial;
-    }
-
-    /**
-     * Given the base, the exponent to power base by and the basis q of Fq, computes (base^exponent) modulo q.
-     * @param base base to be powered
-     * @param exponent exponent to power base by
-     * @param F GaloisField to operate over
-     * @return value of base^exponent % mod
-     */
-    public static int powerModQ(int base, int exponent, GaloisField F) {
-        int mod = F.getPrime();
-        int result = 1;
-        while (exponent > 0) {
-            if (exponent % 2 == 1) {
-                result = (result * base) % mod;
-            }
-            base = (base * base) % mod;
-            exponent /= 2;
-        }
-        return result;
-    }
-
-    public static int findPrimitiveElement(GaloisField F) {
-        int q = F.getPrime();
-        for(int i = 2; i < q; i++) {
-            boolean[] nonZeroElements = new boolean[q];
-            nonZeroElements[0] = true;
-            nonZeroElements[i] = true;
-            boolean found = true;
-            for(int j = 2; j < q; j++) {
-                int pow = (int)Math.pow(i, j) % q;
-                if (nonZeroElements[pow]) {
-                    found = false;
-                    break;
-                }
-                nonZeroElements[pow] = true;
-            }
-            if (found)
-                return i;
-        }
-        return -1;
     }
 }
