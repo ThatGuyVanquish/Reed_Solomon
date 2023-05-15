@@ -29,7 +29,8 @@ public class ReedSolomon {
 
         int[] symbolsArr = new int[n];
         for (int i = 0; i < n; i++) {
-            symbolsArr[i] = msg.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i + 1, F));
+//            symbolsArr[i] = msg.evaluatePolynomial(ReedSolomon.powerModQ(alpha, i + 1, F));
+            symbolsArr[i] = msg.evaluatePolynomial(i);
         }
 
         Polynomial encodedMsg = msg.multiply(generatorPolynomial);
@@ -51,7 +52,8 @@ public class ReedSolomon {
 
         Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
 
-        int[] lagrangeCoeffs = Interpolation.lagrangeInterpolation(Interpolation.getInterpolationCoordinates(msg, new LinkedList<>()), F);
+        int[][] coords = Interpolation.getInterpolationCoordinates(msg, new LinkedList<>());
+        int[] lagrangeCoeffs = Interpolation.lagrangeInterpolation(coords, F);
         Polynomial L = new Polynomial(lagrangeCoeffs, F);
 
         int[] symbolsArr = new int[n];
@@ -117,7 +119,7 @@ public class ReedSolomon {
             int[] Qcoeffs = Arrays.copyOfRange(values, currentNumOfErrors, values.length);
             Polynomial Q = new Polynomial(Qcoeffs, F);
 
-            System.out.println("Q: " + Q + "\nE: " + E);
+//            System.out.println("Q: " + Q + "\nE: " + E);
 
             if (Q.mod(E).equals(Polynomial.ZERO(F))) {
                 return Q.div(E);
@@ -187,16 +189,18 @@ public class ReedSolomon {
              correctedSymbols = new Polynomial(symbolsArr, F);
         }
         else correctedSymbols = symbols;
-        int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(correctedSymbols, new LinkedList<>());
+        int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
+//        System.out.println("Error indices: " + errorIndices);
+//        System.out.println("coords of symbols:\n" + Arrays.deepToString(coordsOfSymbols));
         int[] lagrangeCoeffsOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
         Polynomial lagrangeOfSymbols = new Polynomial(lagrangeCoeffsOfSymbols, F);
+//        System.out.println("LAGRANGE OF SYMBOLS: " + lagrangeOfSymbols);
         int[] originalMessageCoeffs = new int[k];
         for(int i = 0; i < k; i++) {
             originalMessageCoeffs[i] = lagrangeOfSymbols.evaluatePolynomial(i);
         }
         return new Polynomial(originalMessageCoeffs, F);
     }
-
 
     public static String printMatrix(int[][] mat) {
         StringBuilder res = new StringBuilder();
