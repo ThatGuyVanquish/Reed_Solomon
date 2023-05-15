@@ -91,6 +91,7 @@ public class ReedSolomon {
      * Given a polynomial of encoded symbols and the original message length k
      * decodes the original message of length k using Reed-Solomon unique decoding algorithm of Berlekamp-Welch.
      * @param symbols Encoded symbols polynomial
+     * @param k Length of original message
      * @return the original message polynomial if it can be decoded, null otherwise
      */
     public static Polynomial uniqueDecoder(Polynomial symbols, int k) {
@@ -147,6 +148,7 @@ public class ReedSolomon {
      * decodes the original message of length k using Reed-Solomon unique decoding algorithm of Berlekamp-Welch
      * by interpolation.
      * @param symbols Encoded symbols polynomial
+     * @param k Length of original message
      * @return the original message polynomial if it can be decoded, null otherwise
      */
     public static Polynomial uniqueDecoder_L(Polynomial symbols, int k) {
@@ -221,6 +223,15 @@ public class ReedSolomon {
         }
         return new Polynomial(originalMessageCoeffs, F);
     }
+
+    /**
+     * Given a polynomial of encoded symbols and the original message length k
+     * returns a list consisting of close matches to the original message decoded by the Guruswami-Sudan [40] algorithm.
+     * @param symbols Encoded symbols polynomial
+     * @param k Length of original message
+     * @return the original message polynomial if it can be decoded, null otherwise
+     */
+    
 
     public static String printMatrix(int[][] mat) {
         StringBuilder res = new StringBuilder();
