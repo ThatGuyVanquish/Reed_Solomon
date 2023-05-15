@@ -21,7 +21,7 @@ public class Interpolation {
 
         int indexOfError = 0, indexOfSymbol = 0;
         for (int i = 0; i < symbolCoeffs.length; i++) {
-            if (errorIndices.size() != 0 && i == errorIndices.get(indexOfError)) {
+            if (indexOfError < errorIndices.size() && i == errorIndices.get(indexOfError)) {
                 indexOfError++;
                 continue;
             }

@@ -15,7 +15,10 @@ public class Polynomial {
      * @pre foreach i, coefficients[i] = coefficients[i] % basis;
      */
     public Polynomial(int[] coefficients, GaloisField field) {
-        this.coefficients = coefficients;
+        if (coefficients.length == 0)
+            this.coefficients = new int[]{0};
+        else
+            this.coefficients = coefficients;
         this.F = field;
     }
 

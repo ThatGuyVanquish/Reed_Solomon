@@ -1,4 +1,5 @@
 import Code.GaloisField;
+import Code.Interpolation;
 import Code.Polynomial;
 import Code.ReedSolomon;
 
@@ -124,4 +125,114 @@ public class CodeImNotSureIneed {
         }
         return errorIndices;
     }
+
+    public static Polynomial uniqueDecoder_e(Polynomial symbols, int k, int e) {
+        int n = symbols.degree() + 1;
+        GaloisField F = symbols.getField();
+        int q = F.getPrime();
+
+        int[][] equations = new int[n][n];
+        int[] values;
+        // Assuming there are at most maxNumOfErrors errors, values[0]...values[maxNumOfErrors - 1] are the error
+        // variables, and the rest are the "correct" values variables
+        int[] result = new int[n];
+        // First calculate the results
+        for(int i = 0; i < n; i++) {
+            result[i] = F.mod(((int)Math.pow(i, 2) * (-1) * symbols.getCoefficient(i)));
+        }
+        // Generate the linear equations coefficients based on the Berlekamp-Welch algorithm
+        for(int i = 0; i < n; i++) {
+            for(int j = 0; j < n; j++) {
+                switch (j) {
+                    case 0 -> equations[i][j] = symbols.getCoefficient(i);
+                    case 1 -> equations[i][j] = (symbols.getCoefficient(i) * i) % q;
+                    case 2 -> equations[i][j] = q - 1;
+                    default -> equations[i][j] = (q - ((int) Math.pow(i, j - 2) % q)) % q;
+                }
+            }
+        }
+
+        values = F.gaussianElimination(equations, result);
+        int[] errorCoeffs = Arrays.copyOfRange(values, 0, e);
+        errorCoeffs = Arrays.copyOf(errorCoeffs, e + 1);
+        errorCoeffs[e] = 1;
+        Polynomial E = new Polynomial(errorCoeffs, F);
+        int[] Qcoeffs = Arrays.copyOfRange(values, e, values.length);
+        Polynomial Q = new Polynomial(Qcoeffs, F);
+        if (Q.mod(E).equals(Polynomial.ZERO(F))) {
+            return Q.div(E);
+        }
+        // Can't correct errors, return null
+        return null;
+    }
+
+    public static Polynomial uniqueDecoder_Le(Polynomial symbols, int k, int e) {
+        int n = symbols.degree() + 1;
+        GaloisField F = symbols.getField();
+        int q = F.getPrime();
+
+        int[][] equations = new int[n][n];
+        int[] values;
+        // Assuming there are at most maxNumOfErrors errors, values[0]...values[maxNumOfErrors - 1] are the error
+        // variables, and the rest are the "correct" values variables
+        int[] result = new int[n];
+        // First calculate the results
+        for(int i = 0; i < n; i++) {
+            result[i] = F.mod(((int)Math.pow(i, 2) * (-1) * symbols.getCoefficient(i)));
+        }
+        // Generate the linear equations coefficients based on the Berlekamp-Welch algorithm
+        for(int i = 0; i < n; i++) {
+            for(int j = 0; j < n; j++) {
+                switch (j) {
+                    case 0 -> equations[i][j] = symbols.getCoefficient(i);
+                    case 1 -> equations[i][j] = (symbols.getCoefficient(i) * i) % q;
+                    case 2 -> equations[i][j] = q - 1;
+                    default -> equations[i][j] = (q - ((int) Math.pow(i, j - 2) % q)) % q;
+                }
+            }
+        }
+
+        values = F.gaussianElimination(equations, result);
+        Polynomial Q, E, M = null;
+        int[] errorCoeffs = Arrays.copyOfRange(values, 0, e);
+        errorCoeffs = Arrays.copyOf(errorCoeffs, e + 1);
+        errorCoeffs[e] = 1;
+        E = new Polynomial(errorCoeffs, F);
+
+        int[] Qcoeffs = Arrays.copyOfRange(values, e, values.length);
+        Q = new Polynomial(Qcoeffs, F);
+
+        if (Q.mod(E).equals(Polynomial.ZERO(F))) {
+            M = Q.div(E);
+        }
+        if (M == null)
+            return null;
+
+        Polynomial correctedSymbols;
+        List<Integer> errorIndices = new LinkedList<>();
+        if (e > 0) {
+            for(int i = 0; i < n; i++) {
+                if (E.evaluatePolynomial(i) == 0)
+                    errorIndices.add(i);
+            }
+            int[] symbolsArr = symbols.getCoefficients();
+            for(int index : errorIndices) {
+                symbolsArr[index] = M.evaluatePolynomial(index);
+            }
+            correctedSymbols = new Polynomial(symbolsArr, F);
+        }
+        else correctedSymbols = symbols;
+        int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
+//        System.out.println("Error indices: " + errorIndices);
+//        System.out.println("coords of symbols:\n" + Arrays.deepToString(coordsOfSymbols));
+        int[] lagrangeCoeffsOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
+        Polynomial lagrangeOfSymbols = new Polynomial(lagrangeCoeffsOfSymbols, F);
+//        System.out.println("LAGRANGE OF SYMBOLS: " + lagrangeOfSymbols);
+        int[] originalMessageCoeffs = new int[k];
+        for(int i = 0; i < k; i++) {
+            originalMessageCoeffs[i] = lagrangeOfSymbols.evaluatePolynomial(i);
+        }
+        return new Polynomial(originalMessageCoeffs, F);
+    }
+
 }
