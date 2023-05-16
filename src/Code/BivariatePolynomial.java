@@ -111,7 +111,9 @@ public class BivariatePolynomial {
      * @return new polynomial whose coefficients are obtained by evaluating this bivariate polynomial at (X, P(X)).
      */
     public Polynomial evaluatePolynomial(Polynomial p) {
+        System.out.println("P = " + p);
         int coefficientsLength = this.weightedDegree(p.degree()) + 1;
+        System.out.println("Coefficients length = " +coefficientsLength);
         int[] newCoefficients = new int[coefficientsLength];
         // Use memoization to avoid recalculation of exponents
         Map<Integer, Polynomial> exponentsOfP = new HashMap<>();
@@ -155,24 +157,30 @@ public class BivariatePolynomial {
                 int coefficient = this.getCoefficient(exponentX, exponentY);
                 if (coefficient != 0) {
                     res.append(coefficient);
-                    if (exponentX != 0 || exponentY != 0) {
-                        res.append("x");
-                        if (exponentX > 1) {
-                            res.append("^");
+                    if (exponentX != 0) {
+                        if (exponentX == 1)
+                            res.append("x");
+                        else {
+                            res.append("(x^");
                             res.append(exponentX);
-                        }
-                        if (exponentY > 1) {
-                            res.append("y");
-                            res.append("^");
-                            res.append(exponentY);
+                            res.append(")");
                         }
                     }
-                    res.append("+");
+                    if (exponentY != 0) {
+                        if (exponentY == 1)
+                            res.append("y");
+                        else {
+                            res.append("(y^");
+                            res.append(exponentY);
+                            res.append(")");
+                        }
+                    }
+                    res.append(" + ");
                 }
             }
         }
         if (res.length() > 0) {
-            res.deleteCharAt(res.length() - 1);
+            res.delete(res.length() - 3, res.length());
         }
         return res.toString();
     }

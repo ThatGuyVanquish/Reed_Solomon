@@ -22,6 +22,7 @@ public class Polynomial {
             for(int i = coeffsLength - 1; i > 0; i--){
                 if (field.mod(coefficients[i]) == 0)
                     coeffsLength--;
+                else break;
             }
             if (coeffsLength == 0)
                 this.coefficients = new int[]{0};

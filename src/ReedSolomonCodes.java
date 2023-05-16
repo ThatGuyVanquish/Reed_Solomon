@@ -1,8 +1,11 @@
 import Code.GaloisField;
 import Code.Polynomial;
 import Code.ReedSolomon;
+import Code.BivariatePolynomial;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 public class ReedSolomonCodes {
@@ -143,9 +146,24 @@ public class ReedSolomonCodes {
         System.out.println(interpolationEncInterpolDec);
     }
 
+    private static void BVPolyTest() {
+        GaloisField GF7 = new GaloisField(7);
+        Map<Integer, Map<Integer, Integer>> terms = new HashMap<>();
+        terms.put(243, new HashMap<>());
+        terms.get(243).put(1, 6);
+        terms.put(1, new HashMap<>());
+        terms.get(1).put(7, 4);
+        // issue with coefficient of y = 1
+        BivariatePolynomial poly = new BivariatePolynomial(terms, GF7);
+        System.out.println(poly);
+        System.out.println(poly.evaluatePolynomial(1, 2));
+        System.out.println(poly.evaluatePolynomial(new Polynomial(new int[]{1, 1}, GF7)));
+    }
+
     public static void main(String[] args) {
-        GF929Tests();
+//        GF929Tests();
 //        GF7Tests();
 //        test();
+        BVPolyTest();
     }
 }
