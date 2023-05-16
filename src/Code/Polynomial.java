@@ -17,8 +17,17 @@ public class Polynomial {
     public Polynomial(int[] coefficients, GaloisField field) {
         if (coefficients.length == 0)
             this.coefficients = new int[]{0};
-        else
-            this.coefficients = coefficients;
+        else {
+            int coeffsLength = coefficients.length;
+            for(int i = coeffsLength - 1; i > 0; i--){
+                if (field.mod(coefficients[i]) == 0)
+                    coeffsLength--;
+            }
+            if (coeffsLength == 0)
+                this.coefficients = new int[]{0};
+            else
+                this.coefficients = Arrays.copyOfRange(coefficients, 0, coeffsLength);
+        }
         this.F = field;
     }
 
