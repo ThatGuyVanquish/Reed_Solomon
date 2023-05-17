@@ -95,6 +95,8 @@ public class BivariatePolynomial {
      * @return result of the evaluation of this polynomial at point (x,y).
      */
     public int evaluatePolynomial(int x, int y) {
+        x = F.mod(x);
+        y = F.mod(y);
         int res = 0;
         for(Integer exponentX : this.terms.keySet()) {
             for(Integer exponentY : this.terms.get(exponentX).keySet()) {
@@ -111,9 +113,7 @@ public class BivariatePolynomial {
      * @return new polynomial whose coefficients are obtained by evaluating this bivariate polynomial at (X, P(X)).
      */
     public Polynomial evaluatePolynomial(Polynomial p) {
-        System.out.println("P = " + p);
         int coefficientsLength = this.weightedDegree(p.degree()) + 1;
-        System.out.println("Coefficients length = " +coefficientsLength);
         int[] newCoefficients = new int[coefficientsLength];
         // Use memoization to avoid recalculation of exponents
         Map<Integer, Polynomial> exponentsOfP = new HashMap<>();
