@@ -5,12 +5,11 @@ import Code.GaloisField;
 import Code.Polynomial;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BivariatePolynomialTests {
 
@@ -32,7 +31,6 @@ public class BivariatePolynomialTests {
         t3.put(1,1);
         terms.put(1, t3);
         bp = new BivariatePolynomial(terms, F);
-        //System.out.println(bp);
     }
 
     @Test
@@ -117,5 +115,40 @@ public class BivariatePolynomialTests {
         assertEquals("0", BivariatePolynomial.ZERO(F).toString());
         assertEquals("1", BivariatePolynomial.ONE(F).toString());
         assertEquals("(x^2)(y^3) + 4(x^2)y + 7(x^2) + xy + 4(y^2) + 6", bp.toString());
+
+        Map<Integer, Integer> coeffs = new HashMap<>();
+        coeffs.put(0,1);
+        Map<Integer, Map<Integer,Integer>> terms = new HashMap<>();
+        terms.put(0, coeffs);
+        terms.put(1, coeffs);
+        BivariatePolynomial xPlusOne = new BivariatePolynomial(terms, F);
+        assertEquals("x + 1", xPlusOne.toString());
+    }
+
+    @Test
+    void testEquals() {
+        assertNotEquals(null, bp);
+        assertNotEquals(new Object(), bp);
+
+        Map<Integer, Map<Integer, Integer>> terms = new HashMap<>();
+        Map<Integer, Integer> t1 = new HashMap<>();
+        t1.put(0,6);
+        t1.put(2,4);
+        terms.put(0, t1);
+        Map<Integer, Integer> t2 = new HashMap<>();
+        t2.put(0, 7);
+        t2.put(1, 4);
+        t2.put(3, 1);
+        terms.put(2, t2);
+        BivariatePolynomial bp2 = new BivariatePolynomial(terms, F);
+        assertNotEquals(bp, bp2);
+
+        Map<Integer, Integer> t3 = new HashMap<>();
+        t3.put(1,1);
+        terms.put(1, t3);
+        BivariatePolynomial bp3 = new BivariatePolynomial(terms, F);
+
+        assertEquals(bp, bp3);
+
     }
 }

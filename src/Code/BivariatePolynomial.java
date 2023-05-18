@@ -152,11 +152,21 @@ public class BivariatePolynomial {
     @Override
     public String toString() {
         StringBuilder res = new StringBuilder();
-        for(Integer exponentX : this.terms.keySet()) {
-            for(Integer exponentY : this.terms.get(exponentX).keySet()) {
+        // Reverse the order of the keys in the `terms` map.
+        List<Integer> exponentXList = new ArrayList<>(this.terms.keySet());
+        Collections.reverse(exponentXList);
+
+        for(Integer exponentX : exponentXList) {
+            List<Integer> exponentYList = new ArrayList<>(this.terms.get(exponentX).keySet());
+            Collections.reverse(exponentYList);
+            for(Integer exponentY : exponentYList) {
                 int coefficient = this.getCoefficient(exponentX, exponentY);
                 if (coefficient != 0) {
-                    res.append(coefficient);
+                    if (coefficient == 1 && exponentX == 0 && exponentY == 0) {
+                        res.append("1");
+                    }
+                    if (coefficient > 1)
+                        res.append(coefficient);
                     if (exponentX != 0) {
                         if (exponentX == 1)
                             res.append("x");
@@ -177,28 +187,33 @@ public class BivariatePolynomial {
                     }
                     res.append(" + ");
                 }
+                else res.append("0");
             }
         }
-        if (res.length() > 0) {
+        // Remove the last " + " character.
+        if (res.length() > 3) {
             res.delete(res.length() - 3, res.length());
         }
         return res.toString();
     }
 
-
-/*
     @Override
-    public boolean equals(Object other) {
-        if (this == other) return true;
-        if (other == null || getClass() != other.getClass()) return false;
-        Polynomial that = (Polynomial) other;
-        if (!(this.F.equals(that.getField())) || this.degree() != that.degree()) return false;
-        int k = this.degree() + 1;
-        for(int i = 0; i < k; i++) {
-            if (that.getCoefficient(i) != this.getCoefficient(i))
-                return false;
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BivariatePolynomial that = (BivariatePolynomial) o;
+
+        if (this.terms.size() != that.terms.size()) return false;
+        for (Integer exponentX : this.terms.keySet()) {
+            for (Integer exponentY : this.terms.get(exponentX).keySet()) {
+                if (this.getCoefficient(exponentX, exponentY) != that.getCoefficient(exponentX, exponentY)) {
+                    return false;
+                }
+            }
         }
+
         return true;
     }
-*/
+
 }
