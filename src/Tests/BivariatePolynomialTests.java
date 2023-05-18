@@ -123,6 +123,13 @@ public class BivariatePolynomialTests {
         terms.put(1, coeffs);
         BivariatePolynomial xPlusOne = new BivariatePolynomial(terms, F);
         assertEquals("x + 1", xPlusOne.toString());
+
+        Map<Integer, Integer> coeffs2 = new HashMap<>();
+        coeffs2.put(0,5);
+        Map<Integer, Map<Integer,Integer>> terms2 = new HashMap<>();
+        terms2.put(0, coeffs2);
+        BivariatePolynomial five = new BivariatePolynomial(terms2, F);
+        assertEquals("5", five.toString());
     }
 
     @Test
