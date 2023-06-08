@@ -227,11 +227,17 @@ public class ReedSolomon {
     /**
      * Given a polynomial of encoded symbols and the original message length k
      * returns a list consisting of close matches to the original message decoded by the Guruswami-Sudan [40] algorithm.
-     * @param symbols Encoded symbols polynomial
+     * @param symbols Encoded code word polynomial (y_i's)
+     * @param alphas Alphas at which the original message is evaluated to generate the code word sent
      * @param k Length of original message
-     * @return the original message polynomial if it can be decoded, null otherwise
+     * @return a list of codewords that should contain the original message polynomial
      */
-    
+    public static List<Polynomial> listDecoder(Polynomial symbols, Polynomial alphas, int k) {
+        int D = (int)Math.sqrt(2 * k * symbols.degree());
+        //Polynomial fValues = Polynomial.ONE(symbols.getField());
+        //BivariatePolynomial Q = Interpolation.interpolateBivariatePolynomial(symbols, alphas, fValues, D);
+        return null;
+    }
 
     public static String printMatrix(int[][] mat) {
         StringBuilder res = new StringBuilder();

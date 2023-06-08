@@ -1,5 +1,6 @@
 package Code;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -53,5 +54,75 @@ public class Interpolation {
             lagrange = lagrange.add(l_i.multiply(coeff));
         }
         return lagrange.getCoefficients();
+    }
+
+    public static List<Polynomial> getLagrangeTerms(Polynomial values)
+    {
+        int[] vArr = values.getCoefficients();
+        GaloisField GF = values.getField();
+        List<Polynomial> terms = new ArrayList<>();
+        for(int i = 0; i < vArr.length; i++) {
+            Polynomial term = Polynomial.ONE(GF);
+            int denominator = 1;
+            for(int j = 0; j < vArr.length; j++) {
+                if (j == i) continue;
+                Polynomial currentTerm = new Polynomial(new int[]{-vArr[j], 1}, GF);
+                term = term.multiply(currentTerm);
+                denominator *= (vArr[i] - vArr[j]);
+            }
+            Polynomial denomPoly = new Polynomial(new int[]{denominator}, GF);
+            terms.add(term.div(denomPoly));
+        }
+        return terms;
+    }
+
+    /**
+     * Given two vectors of alphas and f(alpha_i),
+     * returns the bivariate Polynomial Q of (1, k)-weighted degree at most D
+     * for which Q(alpha_i, y_i) = 0 for each i in [1, n]
+     * @param xValues x values for which to calculate the interpolated polynomial
+     * @param yValues y values for which to calculate the interpolated polynomial
+     * @param f a bivariate polynomial at which to evaluate the coefficient for the lagrange terms
+     * @param D maximum (1,k) weighted degree of result polynomial
+     * @param k length of original message
+     * @return the interpolated bivariate Polynomial Q
+     */
+    public static BivariatePolynomial interpolateBivariatePolynomial(Polynomial xValues, Polynomial yValues,
+                                                                     BivariatePolynomial f, int D, int k) {
+        GaloisField GF = xValues.getField();
+        // Generate the lagrange terms
+        List<Polynomial> xTerms = getLagrangeTerms(xValues), yTerms = getLagrangeTerms(yValues);
+        List<BivariatePolynomial> xTermsBPs = new ArrayList<>(),
+                yTermsBPs = new ArrayList<>();
+        for(Polynomial p : xTerms) {
+            xTermsBPs.add(BivariatePolynomial.univariateToBivariate(p, 'x'));
+        }
+        for(Polynomial p : yTerms) {
+            yTermsBPs.add(BivariatePolynomial.univariateToBivariate(p, 'y'));
+        }
+        List<BivariatePolynomial> coeffs = new ArrayList<>();
+        int[] alphasArr = xValues.getCoefficients();
+        int[] yArr = yValues.getCoefficients();
+        // Evaluate f at (alpha_i, received_word_i) for every i
+        for(int i = 0; i < alphasArr.length; i++) {
+            int coeff = f.evaluatePolynomial(alphasArr[i], yArr[i]);
+            BivariatePolynomial coeffBP = BivariatePolynomial.univariateToBivariate(new Polynomial(new int[]{coeff}, GF), 'x');
+            coeffs.add(coeffBP);
+        }
+        BivariatePolynomial Q = BivariatePolynomial.ZERO(GF);
+        int index = 0;
+        for(BivariatePolynomial xTerm : xTermsBPs) {
+            BivariatePolynomial bp = BivariatePolynomial.ZERO(GF);
+            for(BivariatePolynomial yTerm : yTermsBPs) {
+                bp.add(yTerm);
+            }
+            BivariatePolynomial coeff = coeffs.get(index);
+            index++;
+            Q.add((xTerm.multiply(bp)).multiply(coeff));
+        }
+        if (Q.weightedDegree(k) <= D)
+            return Q;
+
+        return null;
     }
 }
