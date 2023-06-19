@@ -66,8 +66,7 @@ public class ReedSolomon {
 //        Polynomial generatorPolynomial = ReedSolomon.computeGeneratorPolynomial(F, n, k);
 
         int[][] coords = Interpolation.getInterpolationCoordinates(msg, new LinkedList<>());
-        int[] lagrangeCoeffs = Interpolation.lagrangeInterpolation(coords, F);
-        Polynomial L = new Polynomial(lagrangeCoeffs, F);
+        Polynomial L = Interpolation.lagrangeInterpolation(coords, F);
 
         int[] symbolsArr = new int[n];
         for (int i = 0; i < n; i++) {
@@ -214,8 +213,7 @@ public class ReedSolomon {
         int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
 //        System.out.println("Error indices: " + errorIndices);
 //        System.out.println("coords of symbols:\n" + Arrays.deepToString(coordsOfSymbols));
-        int[] lagrangeCoeffsOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
-        Polynomial lagrangeOfSymbols = new Polynomial(lagrangeCoeffsOfSymbols, F);
+        Polynomial lagrangeOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
 //        System.out.println("LAGRANGE OF SYMBOLS: " + lagrangeOfSymbols);
         int[] originalMessageCoeffs = new int[k];
         for(int i = 0; i < k; i++) {

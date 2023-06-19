@@ -32,7 +32,7 @@ public class Interpolation {
         return coords;
     }
 
-    public static int[] lagrangeInterpolation(int[][] coordinates, GaloisField F) {
+    public static Polynomial lagrangeInterpolation(int[][] coordinates, GaloisField F) {
         List<Polynomial> lagrangePolynomials = new LinkedList<>();
         for(int i = 0; i < coordinates.length; i++) {
             Polynomial l_i = Polynomial.ONE(F);
@@ -53,9 +53,15 @@ public class Interpolation {
             Polynomial coeff = new Polynomial(new int[]{coordinates[i][1]}, F);
             lagrange = lagrange.add(l_i.multiply(coeff));
         }
-        return lagrange.getCoefficients();
+        return lagrange;
     }
 
+    /**
+     * Given a polynomial of values, returns a list of polynomials obtained by multiplying
+     * (x - values_i) for every i
+     * @param values
+     * @return list of Polynomials of the shape (X - values_0) * (X - values_1) * ... * (X - values_n)
+     */
     public static List<Polynomial> getLagrangeTerms(Polynomial values)
     {
         int[] vArr = values.getCoefficients();

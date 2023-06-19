@@ -123,8 +123,7 @@ public class CodeImNotSureIneed {
         int[][] coordsOfSymbols = Interpolation.getInterpolationCoordinates(symbols, errorIndices);
 //        System.out.println("Error indices: " + errorIndices);
 //        System.out.println("coords of symbols:\n" + Arrays.deepToString(coordsOfSymbols));
-        int[] lagrangeCoeffsOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
-        Polynomial lagrangeOfSymbols = new Polynomial(lagrangeCoeffsOfSymbols, F);
+        Polynomial lagrangeOfSymbols = Interpolation.lagrangeInterpolation(coordsOfSymbols, F);
 //        System.out.println("LAGRANGE OF SYMBOLS: " + lagrangeOfSymbols);
         int[] originalMessageCoeffs = new int[k];
         for(int i = 0; i < k; i++) {
